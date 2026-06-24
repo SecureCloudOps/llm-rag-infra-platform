@@ -18,6 +18,13 @@ spec:
         app.kubernetes.io/name: qdrant
         app.kubernetes.io/part-of: llm-rag-infra-platform
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: qdrant
           image: qdrant/qdrant:v1.12.6
@@ -39,6 +46,12 @@ spec:
           volumeMounts:
             - name: qdrant-storage
               mountPath: /qdrant/storage
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
       volumes:
         - name: qdrant-storage
           persistentVolumeClaim:

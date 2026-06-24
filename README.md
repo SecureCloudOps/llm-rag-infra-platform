@@ -196,12 +196,47 @@ From `services/rag-api`:
 pytest
 ```
 
+## Security Scanning
+
+Security validation runs on every `pull_request` and `push` in the
+`Security Scan` GitHub Actions workflow. The workflow is scan-only and safe for
+public repositories: it uses read-only repository permissions, does not require
+GitHub secrets, does not authenticate to cloud providers, does not push images,
+and does not deploy resources.
+
+The workflow fails on high or critical severity findings from infrastructure
+and filesystem scanners. Secret scanning fails when Gitleaks detects a committed
+secret.
+
+Tools used:
+
+- Trivy filesystem scan for vulnerabilities and misconfigurations
+- Checkov for Terraform configuration
+- Checkov for Kubernetes manifests
+- Gitleaks for committed secret detection
+
+Run the same scans locally from the repository root:
+
+```bash
+trivy fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed .
+checkov --directory . --framework terraform --check HIGH,CRITICAL
+checkov --directory k8s --framework kubernetes --check HIGH,CRITICAL
+gitleaks detect --source . --config .gitleaks.toml --verbose
+```
+
+If the repository has no Terraform files yet, the GitHub Actions workflow skips
+the Terraform Checkov scan. Locally, run the Terraform Checkov command after
+Terraform configuration has been added.
+
 ## CI/CD
 
 GitHub Actions validates the repository on `pull_request` and `push`:
 
 - `RAG API CI` installs `services/rag-api` dependencies, runs the Python test suite, runs configured lint tools when present, and builds the API Docker image without pushing it.
 - `Kubernetes Validate` runs `kubectl kustomize k8s/` to ensure the Kubernetes manifests render successfully.
+- `Security Scan` runs Trivy, Checkov, and Gitleaks to catch high-severity
+  vulnerabilities, infrastructure misconfigurations, Kubernetes manifest risks,
+  and committed secrets.
 
 The workflows are public-repository safe. They do not use secrets, authenticate
 to cloud providers, push container images, deploy to Kubernetes, or make

@@ -1,0 +1,11 @@
+title = "LLM RAG Infrastructure Platform Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ignore local development caches that are excluded from source control"
+paths = [
+  '''^\.pytest_cache/''',
+  '''^\.venv/''',
+]

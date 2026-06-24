@@ -240,6 +240,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          readOnlyRootFilesystem: true
       securityContext:
         fsGroup: 1000
         runAsGroup: 1000
@@ -286,9 +287,22 @@ spec:
           requests:
             cpu: 250m
             memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /qdrant/storage
           name: qdrant-storage
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
       - name: qdrant-storage
         persistentVolumeClaim:

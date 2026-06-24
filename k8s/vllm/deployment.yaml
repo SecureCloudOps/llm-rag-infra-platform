@@ -60,6 +60,7 @@ spec:
             capabilities:
               drop:
                 - ALL
+            readOnlyRootFilesystem: true
           readinessProbe:
             httpGet:
               path: /health
