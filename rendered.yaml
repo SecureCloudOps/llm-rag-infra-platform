@@ -1,0 +1,232 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-system
+---
+apiVersion: v1
+data:
+  COLLECTION_NAME: documents
+  LLM_PROVIDER: mock
+  MODEL_NAME: mistral-7b-instruct
+  QDRANT_URL: http://qdrant:6333
+  VLLM_BASE_URL: http://vllm:8001
+kind: ConfigMap
+metadata:
+  name: rag-api-config
+  namespace: ai-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: qdrant
+  namespace: ai-system
+spec:
+  clusterIP: None
+  ports:
+  - name: http
+    port: 6333
+    protocol: TCP
+    targetPort: http
+  - name: grpc
+    port: 6334
+    protocol: TCP
+    targetPort: grpc
+  selector:
+    app.kubernetes.io/name: qdrant
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: rag-api
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: rag-api
+  namespace: ai-system
+spec:
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: rag-api
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: qdrant-storage
+  namespace: ai-system
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: rag-api
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: rag-api
+  namespace: ai-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rag-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rag-api
+        app.kubernetes.io/part-of: llm-rag-infra-platform
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: rag-api-config
+        image: ghcr.io/example/llm-rag-infra-platform/rag-api:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 3
+        name: rag-api
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: qdrant
+  namespace: ai-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qdrant
+  serviceName: qdrant
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qdrant
+        app.kubernetes.io/part-of: llm-rag-infra-platform
+    spec:
+      containers:
+      - image: qdrant/qdrant:v1.12.6
+        imagePullPolicy: IfNotPresent
+        name: qdrant
+        ports:
+        - containerPort: 6333
+          name: http
+          protocol: TCP
+        - containerPort: 6334
+          name: grpc
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "1"
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /qdrant/storage
+          name: qdrant-storage
+      volumes:
+      - name: qdrant-storage
+        persistentVolumeClaim:
+          claimName: qdrant-storage
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rag-api-ingress
+  namespace: ai-system
+spec:
+  ingress:
+  - from:
+    - podSelector: {}
+    ports:
+    - port: 8000
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rag-api
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rag-api-to-qdrant
+  namespace: ai-system
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: rag-api
+    ports:
+    - port: 6333
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: qdrant
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: ai-system
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress

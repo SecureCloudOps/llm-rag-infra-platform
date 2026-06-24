@@ -1,0 +1,1 @@
+vLLM is used for high-throughput LLM inference. Qdrant stores vector embeddings for semantic search.

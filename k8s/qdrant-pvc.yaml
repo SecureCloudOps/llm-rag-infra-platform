@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdrant-storage
+  namespace: ai-system
+  labels:
+    app.kubernetes.io/name: qdrant
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
