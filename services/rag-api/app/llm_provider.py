@@ -77,6 +77,11 @@ class OpenAICompatibleLLMProvider:
         self.model_name = model_name
         self.client = client or httpx.Client(timeout=timeout_seconds)
 
+    def _chat_completions_url(self) -> str:
+        if self.base_url.endswith("/v1"):
+            return f"{self.base_url}/chat/completions"
+        return f"{self.base_url}/v1/chat/completions"
+
     def generate_answer(
         self,
         question: str,
@@ -86,7 +91,7 @@ class OpenAICompatibleLLMProvider:
         del question, retrieved_context
 
         response = self.client.post(
-            f"{self.base_url}/v1/chat/completions",
+            self._chat_completions_url(),
             json={
                 "model": self.model_name,
                 "messages": [

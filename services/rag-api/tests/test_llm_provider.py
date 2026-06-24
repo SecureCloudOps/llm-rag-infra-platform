@@ -79,6 +79,33 @@ def test_openai_compatible_provider_calls_chat_completions_api() -> None:
     assert payload["temperature"] == 0
 
 
+def test_openai_compatible_provider_accepts_versioned_base_url() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            status_code=200,
+            json={"choices": [{"message": {"content": "answer"}}]},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    provider = OpenAICompatibleLLMProvider(
+        base_url="http://vllm.local:8000/v1",
+        model_name="example-model",
+        client=client,
+    )
+
+    provider.generate_answer(
+        question="Question?",
+        retrieved_context=[],
+        prompt="RAG prompt",
+    )
+
+    assert len(requests) == 1
+    assert str(requests[0].url) == "http://vllm.local:8000/v1/chat/completions"
+
+
 def test_openai_compatible_provider_rejects_missing_answer() -> None:
     client = httpx.Client(
         transport=httpx.MockTransport(

@@ -6,13 +6,27 @@ metadata:
 apiVersion: v1
 data:
   COLLECTION_NAME: documents
-  LLM_PROVIDER: mock
-  MODEL_NAME: mistral-7b-instruct
+  LLM_PROVIDER: vllm
+  MODEL_NAME: placeholder-local-model
   QDRANT_URL: http://qdrant:6333
-  VLLM_BASE_URL: http://vllm:8001
+  VLLM_BASE_URL: http://vllm.ai-system.svc.cluster.local:8000/v1
 kind: ConfigMap
 metadata:
   name: rag-api-config
+  namespace: ai-system
+---
+apiVersion: v1
+data:
+  MODEL_NAME: placeholder-local-model
+  VLLM_HOST: 0.0.0.0
+  VLLM_LOG_LEVEL: info
+  VLLM_PORT: "8000"
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/name: vllm
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: vllm-config
   namespace: ai-system
 ---
 apiVersion: v1
@@ -53,6 +67,24 @@ spec:
     targetPort: http
   selector:
     app.kubernetes.io/name: rag-api
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: vllm
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: vllm
+  namespace: ai-system
+spec:
+  ports:
+  - name: http
+    port: 8000
+    protocol: TCP
+    targetPort: http
+  selector:
+    app.kubernetes.io/name: vllm
   type: ClusterIP
 ---
 apiVersion: v1
@@ -129,6 +161,85 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: vllm
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+  name: vllm
+  namespace: ai-system
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vllm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vllm
+        app.kubernetes.io/part-of: llm-rag-infra-platform
+    spec:
+      containers:
+      - args:
+        - --host
+        - $(VLLM_HOST)
+        - --port
+        - $(VLLM_PORT)
+        - --model
+        - $(MODEL_NAME)
+        - --served-model-name
+        - $(MODEL_NAME)
+        command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+        envFrom:
+        - configMapRef:
+            name: vllm-config
+        image: vllm/vllm-openai:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 5
+        name: vllm
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 12
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
       securityContext:
         fsGroup: 1000
         runAsGroup: 1000
@@ -218,6 +329,26 @@ spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: qdrant
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rag-api-to-vllm
+  namespace: ai-system
+spec:
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: rag-api
+    ports:
+    - port: 8000
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vllm
   policyTypes:
   - Ingress
 ---

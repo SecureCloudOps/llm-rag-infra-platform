@@ -12,6 +12,6 @@ spec:
     app.kubernetes.io/name: vllm
   ports:
     - name: http
-      port: 8001
+      port: 8000
       targetPort: http
       protocol: TCP

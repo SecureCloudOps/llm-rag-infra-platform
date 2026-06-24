@@ -6,6 +6,6 @@ metadata:
 data:
   QDRANT_URL: "http://qdrant:6333"
   COLLECTION_NAME: "documents"
-  LLM_PROVIDER: "mock"
-  VLLM_BASE_URL: "http://vllm:8001"
-  MODEL_NAME: "mistral-7b-instruct"
+  LLM_PROVIDER: "vllm"
+  VLLM_BASE_URL: "http://vllm.ai-system.svc.cluster.local:8000/v1"
+  MODEL_NAME: "placeholder-local-model"

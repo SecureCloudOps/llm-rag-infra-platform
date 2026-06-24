@@ -137,21 +137,55 @@ Expected response:
 {"status":"ok","service":"rag-api"}
 ```
 
-## Future vLLM Mode
+## Kubernetes vLLM Mode
 
-The RAG API includes an opt-in OpenAI-compatible LLM provider for a future vLLM
-deployment. This repository does not deploy vLLM yet. Once a compatible vLLM
-server is running, configure the API with:
+The root Kubernetes manifests render the RAG API, Qdrant, and the vLLM service
+in the `ai-system` namespace. In Kubernetes, `rag-api-config` switches the API
+from local mock mode to vLLM:
+
+```text
+LLM_PROVIDER=vllm
+VLLM_BASE_URL=http://vllm.ai-system.svc.cluster.local:8000/v1
+MODEL_NAME=placeholder-local-model
+```
+
+`MODEL_NAME` intentionally matches the default in `k8s/vllm/configmap.yaml`.
+The vLLM Deployment still defaults to `replicas: 0`, so set a real model and
+scale it when you are ready to run inference:
+
+```bash
+kubectl set env deployment/vllm -n ai-system MODEL_NAME=your-public-test-model
+kubectl scale deployment/vllm -n ai-system --replicas=1
+```
+
+Render or apply the Kubernetes stack from the repository root:
+
+```bash
+kubectl kustomize k8s/
+kubectl apply -k k8s/
+```
+
+## Switching LLM Providers
+
+For local Docker Compose and Python development, keep mock mode:
+
+```bash
+export LLM_PROVIDER=mock
+```
+
+To point a local RAG API process at a compatible vLLM endpoint, switch the
+provider and use the model served by vLLM:
 
 ```bash
 export LLM_PROVIDER=vllm
-export VLLM_BASE_URL=http://localhost:8001
+export VLLM_BASE_URL=http://localhost:8000/v1
 export MODEL_NAME=your-model-name
 uvicorn app.main:app --reload
 ```
 
 `LLM_PROVIDER` accepts `mock` or `vllm`. In vLLM mode, the API calls
-`POST /v1/chat/completions` on `VLLM_BASE_URL`.
+the OpenAI-compatible chat completions endpoint. `VLLM_BASE_URL` may include
+the `/v1` suffix, as shown above, or omit it.
 
 ## Run Tests
 

@@ -40,19 +40,41 @@ uvicorn app.main:app --reload
 `LLM_PROVIDER=mock` is the default. It uses a deterministic local provider for
 development and tests, so no LLM server is required.
 
-## Future vLLM Mode
+## Kubernetes vLLM Mode
 
-The API also has an OpenAI-compatible provider path for a future vLLM server.
-Do not enable it unless a compatible vLLM endpoint is already running:
+Local Docker Compose keeps `LLM_PROVIDER=mock` by default, so no LLM server is
+required for development or tests.
+
+The Kubernetes manifests switch the RAG API to the in-cluster vLLM service:
+
+```text
+LLM_PROVIDER=vllm
+VLLM_BASE_URL=http://vllm.ai-system.svc.cluster.local:8000/v1
+MODEL_NAME=placeholder-local-model
+```
+
+`MODEL_NAME` matches the default in `k8s/vllm/configmap.yaml`. Change both
+values together, or use an overlay, when deploying a real model.
+
+## Switching LLM Providers
+
+Use mock mode for local development:
+
+```bash
+export LLM_PROVIDER=mock
+```
+
+Use vLLM mode only when a compatible OpenAI-style vLLM endpoint is reachable:
 
 ```bash
 export LLM_PROVIDER=vllm
-export VLLM_BASE_URL=http://localhost:8001
+export VLLM_BASE_URL=http://localhost:8000/v1
 export MODEL_NAME=your-model-name
 uvicorn app.main:app --reload
 ```
 
-The provider calls `POST /v1/chat/completions` on `VLLM_BASE_URL`.
+The provider calls the OpenAI-compatible chat completions endpoint.
+`VLLM_BASE_URL` may include the `/v1` suffix, as shown above, or omit it.
 
 ## Health Check
 

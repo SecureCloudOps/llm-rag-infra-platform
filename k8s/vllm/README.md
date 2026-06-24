@@ -18,10 +18,13 @@ development and public repositories:
 - `service.yaml`: internal ClusterIP service named `vllm`
 - `kustomization.yaml`: local kustomize entry point
 
-The Service exposes port `8001` inside the cluster to match the RAG API default:
+The Service exposes port `8000` inside the cluster. The root Kubernetes
+manifests configure the RAG API to use:
 
 ```text
-VLLM_BASE_URL=http://vllm:8001
+LLM_PROVIDER=vllm
+VLLM_BASE_URL=http://vllm.ai-system.svc.cluster.local:8000/v1
+MODEL_NAME=placeholder-local-model
 ```
 
 The vLLM container listens on port `8000` and serves the OpenAI-compatible API

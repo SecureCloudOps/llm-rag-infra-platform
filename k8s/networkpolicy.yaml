@@ -45,3 +45,23 @@ spec:
       ports:
         - protocol: TCP
           port: 6333
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rag-api-to-vllm
+  namespace: ai-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vllm
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: rag-api
+      ports:
+        - protocol: TCP
+          port: 8000
