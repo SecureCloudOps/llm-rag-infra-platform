@@ -1,0 +1,20 @@
+aws_region        = "us-east-1"
+state_bucket_name = "llm-rag-infra-platform-terraform-state-123456789012"
+
+github_owner      = "your-github-org-or-user"
+github_repository = "llm-rag-infra-platform"
+
+github_allowed_refs = [
+  "refs/heads/main",
+]
+
+# Include this only if pull request workflows need to run Terraform plan with AWS access.
+# github_extra_oidc_subjects = [
+#   "repo:your-github-org-or-user/llm-rag-infra-platform:pull_request",
+# ]
+
+# Attach only narrowly scoped policies required by downstream Terraform layers.
+# Avoid AdministratorAccess for CI/CD.
+# terraform_additional_policy_arns = [
+#   "arn:aws:iam::123456789012:policy/llm-rag-dev-terraform-infra",
+# ]
