@@ -1,0 +1,73 @@
+name: RAG API CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    name: Test and build RAG API
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/rag-api
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/rag-api/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Run linting if configured
+        run: |
+          if python - <<'PY'
+          import pathlib
+          import sys
+
+          text = pathlib.Path("pyproject.toml").read_text()
+          configured = any(
+              marker in text
+              for marker in ("[tool.ruff", "[tool.flake8", "[tool.black", "[tool.mypy")
+          )
+          sys.exit(0 if configured else 1)
+          PY
+          then
+            if grep -q '^\[tool.ruff' pyproject.toml; then
+              python -m pip install ruff
+              python -m ruff check .
+            fi
+            if grep -q '^\[tool.black' pyproject.toml; then
+              python -m pip install black
+              python -m black --check .
+            fi
+            if grep -q '^\[tool.mypy' pyproject.toml; then
+              python -m pip install mypy
+              python -m mypy .
+            fi
+            if grep -q '^\[tool.flake8' pyproject.toml; then
+              python -m pip install flake8
+              python -m flake8 .
+            fi
+          else
+            echo "No configured Python linting tools found; skipping lint step."
+          fi
+
+      - name: Build Docker image
+        run: docker build --tag rag-api:ci .

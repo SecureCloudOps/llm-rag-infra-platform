@@ -16,6 +16,7 @@ This repository is an infrastructure portfolio project. It is safe for public sh
 
 Initial scaffold:
 
+- CI validates the RAG API tests, optional lint configuration, Docker image build, and Kubernetes manifest rendering
 - `services/rag-api`: minimal FastAPI service with `GET /health`
 - `docs/architecture.md`: target architecture and component responsibilities
 - `infra/terraform`: Terraform entry point for cloud infrastructure
@@ -194,6 +195,17 @@ From `services/rag-api`:
 ```bash
 pytest
 ```
+
+## CI/CD
+
+GitHub Actions validates the repository on `pull_request` and `push`:
+
+- `RAG API CI` installs `services/rag-api` dependencies, runs the Python test suite, runs configured lint tools when present, and builds the API Docker image without pushing it.
+- `Kubernetes Validate` runs `kubectl kustomize k8s/` to ensure the Kubernetes manifests render successfully.
+
+The workflows are public-repository safe. They do not use secrets, authenticate
+to cloud providers, push container images, deploy to Kubernetes, or make
+automatic AWS changes.
 
 ## Public Repo Safety
 
