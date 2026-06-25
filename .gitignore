@@ -24,6 +24,7 @@ venv/
 tfplan
 plan.out
 infra/terraform/**/backend.tf
+infra/terraform/bootstrap/.terraform.lock.hcl
 crash.log
 crash.*.log
 override.tf
