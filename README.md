@@ -1,5 +1,17 @@
 # LLM RAG Infrastructure Platform
 
+[![RAG API CI](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml)
+[![Kubernetes Validate](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml)
+[![Security Scan](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](services/rag-api/pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-RAG%20API-009688.svg)](services/rag-api)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](docker-compose.yml)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Manifests-326CE5.svg)](k8s/)
+[![Terraform](https://img.shields.io/badge/Terraform-AWS%20EKS-844FBA.svg)](infra/terraform)
+
+Author: Mohamed Mohamed
+
 Production-style reference project for serving an open-source LLM with retrieval-augmented generation infrastructure.
 
 The platform is intended to combine:
@@ -252,3 +264,7 @@ Do not commit:
 - Customer, employer, or proprietary data
 
 Use environment variables, local `.env` files excluded by `.gitignore`, and documented placeholders for configuration.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
