@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: vllm
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
   labels:
     app.kubernetes.io/name: vllm
     app.kubernetes.io/part-of: llm-rag-infra-platform

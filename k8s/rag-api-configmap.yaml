@@ -3,6 +3,8 @@ kind: ConfigMap
 metadata:
   name: rag-api-config
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 data:
   QDRANT_URL: "http://qdrant:6333"
   COLLECTION_NAME: "documents"

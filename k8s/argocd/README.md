@@ -15,6 +15,47 @@ For this platform, `llm-rag-platform-app.yaml` points Argo CD at:
 
 The Application uses the existing `k8s/kustomization.yaml` entry point to render and apply the platform Kubernetes resources.
 
+## Deployment Ordering
+
+Argo CD sync waves are used to make platform dependencies explicit. The wave is declared with the `argocd.argoproj.io/sync-wave` annotation on each Kubernetes resource. Lower-numbered waves are applied before higher-numbered waves.
+
+The platform deploys in this order:
+
+| Wave | Resources | Why it runs here |
+| --- | --- | --- |
+| `0` | `ai-system` Namespace, `rag-api-config`, `vllm-config` | Namespaces and configuration must exist before workloads reference them. |
+| `1` | Qdrant PVC, Service, StatefulSet | The vector database is a runtime dependency of the RAG API. |
+| `2` | vLLM Deployment and Service | The RAG API is configured to call the OpenAI-compatible vLLM endpoint in Kubernetes mode. |
+| `3` | RAG API Deployment, Service, and NetworkPolicies | The API starts last because it depends on the namespace, config, Qdrant endpoint, and vLLM service DNS. |
+
+The root `k8s/kustomization.yaml` includes all deployable resources for the `ai-system` namespace:
+
+- `namespace.yaml`
+- `rag-api-configmap.yaml`
+- `vllm/configmap.yaml`
+- `qdrant-pvc.yaml`
+- `qdrant-statefulset.yaml`
+- `qdrant-service.yaml`
+- `vllm/deployment.yaml`
+- `vllm/service.yaml`
+- `rag-api-deployment.yaml`
+- `rag-api-service.yaml`
+- `networkpolicy.yaml`
+
+## Platform Dependencies
+
+The RAG API depends on Qdrant for vector storage and retrieval. It also depends on the vLLM service when `LLM_PROVIDER=vllm`, which is the Kubernetes default in `rag-api-config`.
+
+Qdrant depends on its persistent volume claim before the StatefulSet can become ready. vLLM depends on `vllm-config` for its model and server settings. The RAG API depends on `rag-api-config` for Qdrant, collection, provider, vLLM, and model settings.
+
+NetworkPolicies are applied with the RAG API wave so traffic rules arrive after the workloads and services they select are declared.
+
+## Why GitOps Ordering Matters
+
+Kubernetes eventually converges resources, but applying dependent resources in an arbitrary order can create avoidable transient failures. Examples include pods starting before their ConfigMaps exist, applications failing DNS lookups for services that have not been created yet, and StatefulSets waiting on missing storage claims.
+
+Sync waves keep the GitOps reconcile predictable. They do not replace application-level retry logic, readiness probes, or health checks, but they reduce noisy rollouts and make the intended dependency graph visible during Argo CD syncs.
+
 ## GitOps Flow
 
 GitOps treats Git as the source of truth for Kubernetes state. Operators change manifests in the repository, review those changes, merge them to the tracked branch, and let the GitOps controller reconcile the cluster to match Git.
@@ -55,6 +96,8 @@ Apply the Application after Argo CD is installed in the cluster:
 kubectl apply -f k8s/argocd/llm-rag-platform-app.yaml
 ```
 
+If the GitHub repository is private, configure Argo CD repository credentials before applying the Application. Without repository credentials, Argo CD cannot clone the Git source and the Application will remain in `Unknown` sync status with a comparison error.
+
 Check that Argo CD accepted the Application:
 
 ```bash
@@ -62,3 +105,11 @@ kubectl get applications -n argocd
 ```
 
 Then open the Argo CD UI and confirm that the `llm-rag-platform` Application appears.
+
+Check sync and health from the cluster:
+
+```bash
+kubectl get application llm-rag-platform -n argocd
+kubectl get pods -n ai-system
+kubectl get svc -n ai-system
+```

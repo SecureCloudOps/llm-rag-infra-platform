@@ -3,6 +3,8 @@ kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   podSelector: {}
   policyTypes:
@@ -13,6 +15,8 @@ kind: NetworkPolicy
 metadata:
   name: allow-rag-api-ingress
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   podSelector:
     matchLabels:
@@ -31,6 +35,8 @@ kind: NetworkPolicy
 metadata:
   name: allow-rag-api-to-qdrant
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   podSelector:
     matchLabels:
@@ -51,6 +57,8 @@ kind: NetworkPolicy
 metadata:
   name: allow-rag-api-to-vllm
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   podSelector:
     matchLabels:
