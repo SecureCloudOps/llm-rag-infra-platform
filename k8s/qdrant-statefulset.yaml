@@ -3,6 +3,8 @@ kind: StatefulSet
 metadata:
   name: qdrant
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   labels:
     app.kubernetes.io/name: qdrant
     app.kubernetes.io/part-of: llm-rag-infra-platform

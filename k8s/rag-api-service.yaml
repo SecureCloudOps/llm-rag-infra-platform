@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: rag-api
   namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
   labels:
     app.kubernetes.io/name: rag-api
     app.kubernetes.io/part-of: llm-rag-infra-platform

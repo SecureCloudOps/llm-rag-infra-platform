@@ -223,6 +223,21 @@ kubectl kustomize k8s/
 kubectl apply -k k8s/
 ```
 
+## Argo CD GitOps Deployment
+
+Argo CD deploys the platform from `k8s/argocd/llm-rag-platform-app.yaml`, which points at the root `k8s/` kustomization. The root kustomization includes the `ai-system` namespace, Qdrant, vLLM, the RAG API, configuration, and network policies.
+
+The manifests use Argo CD sync waves for dependency ordering:
+
+- Wave `0`: namespace and ConfigMaps
+- Wave `1`: Qdrant storage, Service, and StatefulSet
+- Wave `2`: vLLM Deployment and Service
+- Wave `3`: RAG API Deployment, Service, and NetworkPolicies
+
+This ordering matters because the RAG API reads ConfigMaps, connects to Qdrant, and calls the vLLM service in Kubernetes mode. GitOps ordering reduces avoidable rollout noise by creating foundational resources and service dependencies before workloads that consume them.
+
+See [`k8s/argocd/README.md`](k8s/argocd/README.md) for the dependency table and verification commands.
+
 ## Terraform Infrastructure
 
 Terraform lives under `infra/terraform`:
