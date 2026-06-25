@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   test-and-build:
@@ -71,3 +72,21 @@ jobs:
 
       - name: Build Docker image
         run: docker build --tag rag-api:ci .
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE_NAME: ghcr.io/securecloudops/llm-rag-infra-platform/rag-api
+        run: |
+          docker tag rag-api:ci "$IMAGE_NAME:${GITHUB_SHA}"
+          docker tag rag-api:ci "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:${GITHUB_SHA}"
+          docker push "$IMAGE_NAME:latest"
