@@ -23,7 +23,7 @@ venv/
 *.plan
 tfplan
 plan.out
-infra/terraform/bootstrap/backend.tf
+infra/terraform/**/backend.tf
 crash.log
 crash.*.log
 override.tf
