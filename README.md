@@ -24,6 +24,51 @@ The platform is intended to combine:
 
 This repository is an infrastructure portfolio project. It is safe for public sharing and does not include secrets, cloud account IDs, private endpoints, or claims of a live production deployment.
 
+## Architecture Overview
+
+```mermaid
+flowchart TB
+    User["User or client"] --> API["FastAPI RAG API<br/>services/rag-api"]
+
+    subgraph "RAG workflow"
+        Upload["POST /documents/upload"] --> Chunk["Chunk text"]
+        Chunk --> Embed["Mock embeddings"]
+        Embed --> Store["Store vectors and metadata"]
+        Ask["POST /ask or /search"] --> QueryEmbed["Embed query"]
+        QueryEmbed --> Retrieve["Retrieve relevant chunks"]
+        Retrieve --> Prompt["Build RAG prompt"]
+    end
+
+    API --> Upload
+    API --> Ask
+    Store --> Qdrant["Qdrant vector database"]
+    Retrieve --> Qdrant
+    Prompt --> Provider{"LLM provider"}
+    Provider --> Mock["Mock provider<br/>local default"]
+    Provider --> VLLM["vLLM OpenAI-compatible server<br/>Kubernetes mode"]
+
+    subgraph "Local development"
+        Compose["docker-compose.yml"] --> API
+        Compose --> Qdrant
+    end
+
+    subgraph "Kubernetes deployment"
+        K8s["k8s/ manifests"] --> ApiDeploy["rag-api Deployment and Service"]
+        K8s --> QdrantStateful["Qdrant StatefulSet and Service"]
+        K8s --> VllmDeploy["vLLM Deployment and Service"]
+        ApiDeploy --> API
+        QdrantStateful --> Qdrant
+        VllmDeploy --> VLLM
+    end
+
+    subgraph "Cloud bootstrap"
+        Terraform["infra/terraform/bootstrap"] --> AWS["AWS foundation for EKS"]
+        AWS --> K8s
+    end
+```
+
+For more detail on component responsibilities and target deployment boundaries, see [`docs/architecture.md`](docs/architecture.md).
+
 ## Current Status
 
 Initial scaffold:
