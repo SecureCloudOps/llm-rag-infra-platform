@@ -53,7 +53,7 @@ spec:
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: true
+            readOnlyRootFilesystem: false
       volumes:
         - name: qdrant-storage
           persistentVolumeClaim:
