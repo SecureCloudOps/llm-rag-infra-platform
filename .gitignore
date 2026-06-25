@@ -19,6 +19,11 @@ venv/
 *.tfstate.*
 *.tfvars
 *.tfvars.json
+*.tfplan
+*.plan
+tfplan
+plan.out
+infra/terraform/bootstrap/backend.tf
 crash.log
 crash.*.log
 override.tf
