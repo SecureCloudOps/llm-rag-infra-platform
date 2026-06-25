@@ -1,7 +1,8 @@
 # Dev Terraform Layer
 
 This layer creates the main AWS infrastructure for the LLM RAG Infrastructure
-Platform dev environment.
+Platform dev environment by composing reusable modules from
+`infra/terraform/modules`.
 
 ## Resources
 
@@ -12,6 +13,14 @@ Platform dev environment.
 - S3 bucket for uploaded documents with public access blocked, versioning, encryption, and TLS-only bucket policy
 - IAM roles for EKS control plane, worker nodes, and rag-api IRSA
 - Least-privilege rag-api IAM policy scoped to the uploaded documents bucket
+
+## Module Layout
+
+- `../../modules/networking` creates the VPC, subnets, gateways, and route tables
+- `../../modules/eks` creates the EKS cluster and managed node group
+- `../../modules/ecr` creates the `rag-api` container repository
+- `../../modules/storage` creates the uploaded documents bucket
+- `../../modules/iam` creates the EKS OIDC provider and rag-api IRSA role
 
 ## Backend
 

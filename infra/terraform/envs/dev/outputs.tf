@@ -1,49 +1,49 @@
 output "vpc_id" {
   description = "ID of the dev VPC."
-  value       = aws_vpc.this.id
+  value       = module.networking.vpc_id
 }
 
 output "public_subnet_ids" {
   description = "IDs of public subnets."
-  value       = values(aws_subnet.public)[*].id
+  value       = module.networking.public_subnet_ids
 }
 
 output "private_subnet_ids" {
   description = "IDs of private subnets used by EKS worker nodes."
-  value       = values(aws_subnet.private)[*].id
+  value       = module.networking.private_subnet_ids
 }
 
 output "eks_cluster_name" {
   description = "EKS cluster name."
-  value       = aws_eks_cluster.this.name
+  value       = module.eks.cluster_name
 }
 
 output "eks_cluster_endpoint" {
   description = "EKS API endpoint."
-  value       = aws_eks_cluster.this.endpoint
+  value       = module.eks.cluster_endpoint
 }
 
 output "eks_cluster_security_group_id" {
   description = "Security group attached to the EKS control plane."
-  value       = aws_security_group.eks_cluster.id
+  value       = module.eks.cluster_security_group_id
 }
 
 output "node_group_name" {
   description = "Managed node group name."
-  value       = aws_eks_node_group.default.node_group_name
+  value       = module.eks.node_group_name
 }
 
 output "rag_api_ecr_repository_url" {
   description = "ECR repository URL for rag-api images."
-  value       = aws_ecr_repository.rag_api.repository_url
+  value       = module.ecr.repository_url
 }
 
 output "uploaded_documents_bucket_name" {
   description = "S3 bucket name for uploaded documents."
-  value       = aws_s3_bucket.uploaded_documents.id
+  value       = module.storage.document_bucket_name
 }
 
 output "rag_api_role_arn" {
   description = "IAM role ARN to annotate on the rag-api Kubernetes service account."
-  value       = aws_iam_role.rag_api.arn
+  value       = module.iam.rag_api_role_arn
 }
