@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/name: qdrant
     app.kubernetes.io/part-of: llm-rag-infra-platform
 spec:
+  storageClassName: gp2
   accessModes:
     - ReadWriteOnce
   resources:
