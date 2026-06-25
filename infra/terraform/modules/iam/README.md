@@ -5,7 +5,6 @@ static credentials.
 
 ## Resources
 
-- EKS IAM OIDC provider
 - IRSA role for the `rag-api` Kubernetes service account
 - Least-privilege S3 policy scoped to the uploaded documents bucket
 - Policy attachment for the IRSA role
@@ -13,7 +12,8 @@ static credentials.
 ## Inputs
 
 - `cluster_name`
-- `oidc_issuer_url`
+- `oidc_provider_arn`
+- `oidc_provider_host`
 - `document_bucket_arn`
 - `rag_api_namespace`
 - `rag_api_service_account`

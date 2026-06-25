@@ -1,6 +1,6 @@
 output "oidc_provider_arn" {
   description = "IAM OIDC provider ARN for the EKS cluster."
-  value       = aws_iam_openid_connect_provider.eks.arn
+  value       = var.oidc_provider_arn
 }
 
 output "rag_api_role_arn" {

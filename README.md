@@ -223,6 +223,64 @@ kubectl kustomize k8s/
 kubectl apply -k k8s/
 ```
 
+## Terraform Infrastructure
+
+Terraform lives under `infra/terraform`:
+
+- `bootstrap`: creates the S3 remote state bucket foundation.
+- `envs/dev`: composes reusable modules into the dev EKS environment.
+- `modules/networking`: VPC, public/private subnets, internet gateway, NAT Gateway topology, and route tables.
+- `modules/eks`: EKS control plane, OIDC provider, managed add-ons, endpoint access settings, add-on IRSA, and managed node groups.
+- `modules/ecr`: `rag-api` ECR repository with scan-on-push and immutable image tags by default.
+- `modules/storage`: encrypted, versioned S3 bucket for uploaded documents.
+- `modules/iam`: IRSA role and least-privilege document bucket policy for the `rag-api` service account.
+
+The dev networking default is `single_nat_gateway = true` for cost control. A
+production environment should set `single_nat_gateway = false` to create one NAT
+Gateway per AZ and avoid a single-AZ egress dependency.
+
+The EKS module manages pinned versions of `vpc-cni`, `coredns`, `kube-proxy`,
+and `aws-ebs-csi-driver`. Review the pins whenever `cluster_version` changes.
+Node capacity is split into independently configurable `system` and `workloads`
+managed node groups.
+
+The dev EKS API endpoint remains public but restricted by
+`cluster_endpoint_public_access_cidrs`, with private endpoint access also
+enabled. For private-only production, set:
+
+```hcl
+cluster_endpoint_public_access  = false
+cluster_endpoint_private_access = true
+```
+
+Remote state is intentionally bootstrapped first. Apply
+`infra/terraform/bootstrap`, then copy `infra/terraform/envs/dev/backend.tf.example`
+to `backend.tf` and fill in the generated state bucket before deploying dev.
+The committed example uses S3 native lock files.
+
+OIDC is enabled through the EKS module so Kubernetes service accounts and EKS
+managed add-ons can assume AWS roles with IRSA. The AWS EBS CSI Driver add-on
+uses its own role, and the `rag-api` service account should be annotated with
+the `rag_api_role_arn` output to access the uploaded documents bucket without
+static AWS credentials.
+
+Deploy dev from `infra/terraform/envs/dev`:
+
+```bash
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform fmt -recursive
+terraform validate
+terraform plan
+terraform apply
+```
+
+Before applying, replace placeholder CIDRs, tags, backend values, and any sizing
+defaults that do not match the target AWS account. Future production
+differences should include a separate state key and environment directory,
+private-only endpoint access, one NAT Gateway per AZ, larger and reviewed node
+capacity, reviewed add-on pins, and non-destructive storage settings.
+
 ## Switching LLM Providers
 
 For local Docker Compose and Python development, keep mock mode:

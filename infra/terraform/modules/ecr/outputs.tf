@@ -12,3 +12,8 @@ output "repository_arn" {
   description = "ECR repository ARN."
   value       = aws_ecr_repository.this.arn
 }
+
+output "image_tag_mutability" {
+  description = "Configured image tag mutability for the repository."
+  value       = aws_ecr_repository.this.image_tag_mutability
+}

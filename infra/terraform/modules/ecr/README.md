@@ -6,6 +6,7 @@ Creates an Amazon ECR repository for application container images.
 
 - ECR repository with AES256 encryption
 - Image scan on push
+- Immutable image tags by default
 - Lifecycle policy that keeps the most recent images
 
 ## Inputs
@@ -19,3 +20,4 @@ Creates an Amazon ECR repository for application container images.
 - `repository_name`
 - `repository_url`
 - `repository_arn`
+- `image_tag_mutability`

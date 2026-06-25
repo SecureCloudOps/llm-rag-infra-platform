@@ -5,18 +5,55 @@ name_prefix = "llm-rag"
 vpc_cidr             = "10.40.0.0/16"
 public_subnet_cidrs  = ["10.40.0.0/20", "10.40.16.0/20"]
 private_subnet_cidrs = ["10.40.128.0/20", "10.40.144.0/20"]
+single_nat_gateway   = true
 
-cluster_version                     = "1.33"
+cluster_version                  = "1.33"
+cluster_endpoint_public_access   = true
+cluster_endpoint_private_access  = true
 cluster_endpoint_public_access_cidrs = ["203.0.113.10/32"]
 
-node_instance_types = ["t3.medium"]
-node_min_size       = 1
-node_desired_size   = 2
-node_max_size       = 3
-node_disk_size      = 30
+eks_addons = {
+  vpc-cni = {
+    version = "v1.20.4-eksbuild.1"
+  }
+  coredns = {
+    version = "v1.12.2-eksbuild.4"
+  }
+  kube-proxy = {
+    version = "v1.33.3-eksbuild.6"
+  }
+  aws-ebs-csi-driver = {
+    version = "v1.48.0-eksbuild.2"
+  }
+}
 
-rag_api_namespace            = "rag"
-rag_api_service_account_name = "rag-api"
+node_groups = {
+  system = {
+    instance_types = ["t3.medium"]
+    min_size       = 1
+    desired_size   = 1
+    max_size       = 2
+    disk_size      = 30
+    labels = {
+      role = "system"
+    }
+  }
+  workloads = {
+    instance_types = ["t3.medium"]
+    min_size       = 1
+    desired_size   = 1
+    max_size       = 3
+    disk_size      = 30
+    labels = {
+      role = "workloads"
+    }
+  }
+}
+
+ecr_image_tag_mutability = "IMMUTABLE"
+
+rag_api_namespace             = "rag"
+rag_api_service_account_name  = "rag-api"
 force_destroy_document_bucket = false
 
 tags = {

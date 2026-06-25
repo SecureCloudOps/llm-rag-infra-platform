@@ -6,21 +6,70 @@ Platform dev environment by composing reusable modules from
 
 ## Resources
 
-- VPC with DNS support, public subnets, private subnets, internet gateway, NAT gateways, and route tables
-- EKS cluster with control plane logging and private worker nodes
-- EKS managed node group
-- ECR repository for `rag-api`
+- VPC with DNS support, public subnets, private subnets, internet gateway, configurable NAT Gateways, and route tables
+- EKS cluster with control plane logging, configurable public/private API endpoint access, and private worker nodes
+- EKS managed add-ons for VPC CNI, CoreDNS, kube-proxy, and the AWS EBS CSI driver
+- Separate EKS managed node groups for `system` and `workloads`
+- ECR repository for `rag-api` with immutable image tags and scan-on-push
 - S3 bucket for uploaded documents with public access blocked, versioning, encryption, and TLS-only bucket policy
 - IAM roles for EKS control plane, worker nodes, and rag-api IRSA
 - Least-privilege rag-api IAM policy scoped to the uploaded documents bucket
 
 ## Module Layout
 
-- `../../modules/networking` creates the VPC, subnets, gateways, and route tables
-- `../../modules/eks` creates the EKS cluster and managed node group
+- `../../modules/networking` creates the VPC, subnets, gateways, NAT topology, and route tables
+- `../../modules/eks` creates the EKS cluster, OIDC provider, managed add-ons, add-on IRSA, and managed node groups
 - `../../modules/ecr` creates the `rag-api` container repository
 - `../../modules/storage` creates the uploaded documents bucket
-- `../../modules/iam` creates the EKS OIDC provider and rag-api IRSA role
+- `../../modules/iam` creates the rag-api IRSA role and least-privilege document bucket policy
+
+## Networking
+
+Dev defaults to `single_nat_gateway = true` to reduce cost before the first
+deployment. That creates one NAT Gateway in the first selected AZ and routes all
+private subnets through it.
+
+For production, set:
+
+```hcl
+single_nat_gateway = false
+```
+
+That creates one NAT Gateway per selected AZ so private subnet egress remains
+available if an AZ-local NAT Gateway fails.
+
+## EKS
+
+The cluster keeps private endpoint access enabled. Public endpoint access is
+enabled for dev and restricted by `cluster_endpoint_public_access_cidrs`; replace
+the example documentation CIDR with trusted workstation or VPN egress ranges
+before applying.
+
+For private-only production clusters, use:
+
+```hcl
+cluster_endpoint_public_access  = false
+cluster_endpoint_private_access = true
+```
+
+Managed add-ons are pinned in `eks_addons`:
+
+- `vpc-cni`
+- `coredns`
+- `kube-proxy`
+- `aws-ebs-csi-driver`
+
+Review and update the pinned add-on versions whenever `cluster_version` changes.
+
+## Node Groups
+
+`node_groups` must define both:
+
+- `system`: baseline cluster and platform capacity
+- `workloads`: application workload capacity
+
+Each group has independent instance types, min/desired/max size, disk size,
+capacity type, labels, and optional taints.
 
 ## Backend
 
@@ -69,11 +118,14 @@ terraform plan
 terraform apply
 ```
 
-## Kubernetes Integration
+## OIDC and Kubernetes Integration
+
+The EKS module creates the IAM OIDC provider once and exposes it to IAM modules.
+The AWS EBS CSI Driver managed add-on gets its own IRSA role through
+`ebs_csi_role_arn` instead of using broad storage permissions on the node role.
 
 Annotate the `rag-api` Kubernetes service account with the `rag_api_role_arn`
-output so pods can access the uploaded documents bucket without static AWS
-keys:
+output so pods can access the uploaded documents bucket without static AWS keys:
 
 ```yaml
 eks.amazonaws.com/role-arn: <rag_api_role_arn>
@@ -81,6 +133,14 @@ eks.amazonaws.com/role-arn: <rag_api_role_arn>
 
 Use the `uploaded_documents_bucket_name` and `rag_api_ecr_repository_url`
 outputs when configuring application deployments and image publishing.
+
+## Production Differences
+
+Future production environments should use a separate environment directory and
+remote state key, per-AZ NAT Gateways, private-only EKS API endpoint access,
+larger and multi-AZ node group capacity, reviewed EKS add-on pins for the target
+Kubernetes version, stricter operator access CIDRs, and non-destructive storage
+settings.
 
 ## Portfolio Safety
 

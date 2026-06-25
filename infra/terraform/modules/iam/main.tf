@@ -1,11 +1,3 @@
-data "tls_certificate" "eks_oidc" {
-  url = var.oidc_issuer_url
-}
-
-locals {
-  oidc_provider_host = replace(var.oidc_issuer_url, "https://", "")
-}
-
 data "aws_iam_policy_document" "rag_api_assume_role" {
   statement {
     effect  = "Allow"
@@ -13,18 +5,18 @@ data "aws_iam_policy_document" "rag_api_assume_role" {
 
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+      identifiers = [var.oidc_provider_arn]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${local.oidc_provider_host}:aud"
+      variable = "${var.oidc_provider_host}:aud"
       values   = ["sts.amazonaws.com"]
     }
 
     condition {
       test     = "StringEquals"
-      variable = "${local.oidc_provider_host}:sub"
+      variable = "${var.oidc_provider_host}:sub"
       values   = ["system:serviceaccount:${var.rag_api_namespace}:${var.rag_api_service_account}"]
     }
   }
@@ -59,12 +51,6 @@ data "aws_iam_policy_document" "rag_api_documents" {
       "${var.document_bucket_arn}/*",
     ]
   }
-}
-
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = var.oidc_issuer_url
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
 }
 
 resource "aws_iam_role" "rag_api" {

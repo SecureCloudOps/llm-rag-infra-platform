@@ -3,8 +3,9 @@ data "aws_availability_zones" "available" {
 }
 
 locals {
-  az_count           = min(length(var.public_subnet_cidrs), length(var.private_subnet_cidrs), length(data.aws_availability_zones.available.names))
-  availability_zones = slice(data.aws_availability_zones.available.names, 0, local.az_count)
+  az_count                = min(length(var.public_subnet_cidrs), length(var.private_subnet_cidrs), length(data.aws_availability_zones.available.names))
+  availability_zones      = slice(data.aws_availability_zones.available.names, 0, local.az_count)
+  nat_gateway_subnet_keys = var.single_nat_gateway ? [local.availability_zones[0]] : local.availability_zones
 }
 
 resource "aws_vpc" "this" {
@@ -61,7 +62,10 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  for_each = aws_subnet.public
+  for_each = {
+    for key, subnet in aws_subnet.public : key => subnet
+    if contains(local.nat_gateway_subnet_keys, key)
+  }
 
   domain = "vpc"
 
@@ -71,7 +75,10 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "this" {
-  for_each = aws_subnet.public
+  for_each = {
+    for key, subnet in aws_subnet.public : key => subnet
+    if contains(local.nat_gateway_subnet_keys, key)
+  }
 
   allocation_id = aws_eip.nat[each.key].id
   subnet_id     = each.value.id
@@ -110,7 +117,7 @@ resource "aws_route_table" "private" {
 
   route {
     cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.this[each.key].id
+    nat_gateway_id = var.single_nat_gateway ? aws_nat_gateway.this[local.availability_zones[0]].id : aws_nat_gateway.this[each.key].id
   }
 
   tags = {

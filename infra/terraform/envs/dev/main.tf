@@ -18,6 +18,7 @@ module "networking" {
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
+  single_nat_gateway   = var.single_nat_gateway
 }
 
 module "eks" {
@@ -25,21 +26,21 @@ module "eks" {
 
   cluster_name                         = local.cluster_name
   cluster_version                      = var.cluster_version
+  cluster_endpoint_public_access       = var.cluster_endpoint_public_access
+  cluster_endpoint_private_access      = var.cluster_endpoint_private_access
   cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
   vpc_id                               = module.networking.vpc_id
   public_subnet_ids                    = module.networking.public_subnet_ids
   private_subnet_ids                   = module.networking.private_subnet_ids
-  node_instance_types                  = var.node_instance_types
-  node_min_size                        = var.node_min_size
-  node_desired_size                    = var.node_desired_size
-  node_max_size                        = var.node_max_size
-  node_disk_size                       = var.node_disk_size
+  eks_addons                           = var.eks_addons
+  node_groups                          = var.node_groups
 }
 
 module "ecr" {
   source = "../../modules/ecr"
 
-  repository_name = "${var.name_prefix}/rag-api"
+  repository_name      = "${var.name_prefix}/rag-api"
+  image_tag_mutability = var.ecr_image_tag_mutability
 }
 
 module "storage" {
@@ -53,7 +54,8 @@ module "iam" {
   source = "../../modules/iam"
 
   cluster_name            = local.cluster_name
-  oidc_issuer_url         = module.eks.oidc_issuer_url
+  oidc_provider_arn       = module.eks.oidc_provider_arn
+  oidc_provider_host      = module.eks.oidc_provider_host
   document_bucket_arn     = module.storage.document_bucket_arn
   rag_api_namespace       = var.rag_api_namespace
   rag_api_service_account = var.rag_api_service_account_name
