@@ -48,6 +48,10 @@ spec:
           volumeMounts:
             - name: qdrant-storage
               mountPath: /qdrant/storage
+            - name: qdrant-snapshots
+              mountPath: /qdrant/snapshots
+            - name: qdrant-tmp
+              mountPath: /tmp
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -58,3 +62,7 @@ spec:
         - name: qdrant-storage
           persistentVolumeClaim:
             claimName: qdrant-storage
+        - name: qdrant-snapshots
+          emptyDir: {}
+        - name: qdrant-tmp
+          emptyDir: {}
