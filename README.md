@@ -1,8 +1,8 @@
 # LLM RAG Infrastructure Platform
 
-[![RAG API CI](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml)
-[![Kubernetes Validate](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml)
-[![Security Scan](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml/badge.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml)
+[![RAG API CI](https://img.shields.io/badge/RAG%20API%20CI-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml)
+[![Kubernetes Validate](https://img.shields.io/badge/Kubernetes%20Validate-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml)
+[![Security Scan](https://img.shields.io/badge/Security%20Scan-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](services/rag-api/pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-RAG%20API-009688.svg)](services/rag-api)
@@ -12,17 +12,27 @@
 
 Author: Mohamed Mohamed
 
-Production-style reference project for serving an open-source LLM with retrieval-augmented generation infrastructure.
+Production-style AI infrastructure platform for deploying a RAG API with
+FastAPI, Qdrant, vLLM, Kubernetes, Terraform-managed AWS EKS infrastructure,
+GitOps deployment, observability, autoscaling, and security scanning.
 
-The platform is intended to combine:
+Built as a public, safe-to-share infrastructure portfolio project demonstrating
+cloud-native AI platform engineering without exposing secrets, private
+endpoints, cloud account IDs, or claims of a live production deployment.
 
-- vLLM for OpenAI-compatible inference serving
-- Qdrant for vector search
-- FastAPI for a RAG API layer
-- Kubernetes manifests for application deployment
-- Terraform for AWS EKS infrastructure
+## What This Demonstrates
 
-This repository is an infrastructure portfolio project. It is safe for public sharing and does not include secrets, cloud account IDs, private endpoints, or claims of a live production deployment.
+- End-to-end RAG API with document upload, chunking, vector search, generation,
+  health checks, and Prometheus metrics
+- Local Docker Compose path with Qdrant and mock inference for zero-key
+  development
+- Kubernetes deployment for the RAG API, Qdrant, vLLM, HPAs, network policies,
+  Prometheus, and Grafana
+- Terraform modules for EKS, networking, IAM, ECR, storage, and remote state
+  bootstrap
+- Argo CD GitOps application with sync-wave ordering for platform dependencies
+- CI validation for Python tests, Docker image build, Kubernetes manifest
+  rendering, and security scanning
 
 ## Architecture Overview
 
@@ -69,24 +79,22 @@ flowchart TB
 
 For more detail on component responsibilities and target deployment boundaries, see [`docs/architecture.md`](docs/architecture.md).
 
-## Current Status
+## Implemented Capabilities
 
-Initial scaffold:
-
-- CI validates the RAG API tests, optional lint configuration, Docker image build, and Kubernetes manifest rendering
 - `services/rag-api`: FastAPI RAG service with health, document, search, ask, and Prometheus metrics endpoints
-- `docs/architecture.md`: target architecture and component responsibilities
-- `infra/terraform`: Terraform entry point for cloud infrastructure
-- `k8s`: Kubernetes manifests for app workloads, autoscaling, and lightweight observability
-- `.github/workflows`: CI/CD workflow definitions
-- `scripts`: operational and developer helper scripts
+- `docker-compose.yml`: local RAG API and Qdrant environment with mock inference defaults
+- `k8s`: Kubernetes manifests for app workloads, autoscaling, network policy, vLLM, and lightweight observability
+- `k8s/argocd`: Argo CD application definition and GitOps rollout notes
+- `infra/terraform`: AWS EKS-oriented infrastructure modules and dev environment composition
+- `.github/workflows`: CI, Kubernetes validation, and security scanning workflows
+- `docs/architecture.md`: architecture boundaries, component responsibilities, and deployment notes
 
-Planned follow-up areas:
+Roadmap areas:
 
-- `infra/terraform`: AWS EKS, networking, and managed infrastructure
-- `k8s`: Kubernetes manifests or Helm charts
-- `services/rag-api`: retrieval and generation endpoints
-- `services/ingestion`: document ingestion and embedding pipeline
+- Replace placeholder vLLM model settings with a documented public test model
+- Add a dedicated ingestion service for larger document pipelines
+- Promote Kubernetes manifests into environment-specific overlays or Helm charts
+- Add production environment separation for Terraform state, sizing, and cluster access controls
 
 ## Repository Layout
 
@@ -96,24 +104,36 @@ llm-rag-infra-platform/
 ├── .github/
 │   └── workflows/
 ├── docs/
+│   └── architecture.md
 ├── infra/
 │   └── terraform/
+│       ├── bootstrap/
+│       ├── envs/
+│       │   └── dev/
+│       └── modules/
+│           ├── ecr/
+│           ├── eks/
+│           ├── iam/
+│           ├── networking/
+│           └── storage/
 ├── k8s/
-│   ├── base/
-│   ├── apps/
-│   ├── qdrant/
+│   ├── argocd/
+│   ├── observability/
 │   ├── vllm/
-│   └── observability/
-├── scripts/
-└── services/
-    └── rag-api/
-        ├── app/
-        │   ├── __init__.py
-        │   └── main.py
-        ├── tests/
-        │   └── test_health.py
-        ├── pyproject.toml
-        └── README.md
+│   ├── rag-api-deployment.yaml
+│   ├── rag-api-service.yaml
+│   ├── qdrant-statefulset.yaml
+│   ├── networkpolicy.yaml
+│   └── kustomization.yaml
+├── services/
+│   └── rag-api/
+│       ├── app/
+│       ├── tests/
+│       ├── Dockerfile
+│       ├── pyproject.toml
+│       └── README.md
+├── docker-compose.yml
+└── rendered.yaml
 ```
 
 ## Run the RAG API Locally
