@@ -82,9 +82,9 @@ variable "cluster_version" {
 }
 
 variable "cluster_endpoint_public_access" {
-  description = "Keep the EKS API endpoint public for dev access. Set false for private-only production clusters."
+  description = "Whether the EKS API endpoint is reachable publicly. Keep false unless a dev workstation CIDR is explicitly required."
   type        = bool
-  default     = true
+  default     = false
 
   validation {
     condition     = var.cluster_endpoint_public_access || var.cluster_endpoint_private_access
@@ -99,9 +99,9 @@ variable "cluster_endpoint_private_access" {
 }
 
 variable "cluster_endpoint_public_access_cidrs" {
-  description = "CIDR blocks allowed to reach the public EKS API endpoint. Defaults to a documentation-only placeholder; replace before applying."
+  description = "CIDR blocks allowed to reach the public EKS API endpoint when public access is enabled."
   type        = list(string)
-  default     = ["203.0.113.10/32"]
+  default     = ["10.40.0.0/16"]
 
   validation {
     condition     = alltrue([for cidr in var.cluster_endpoint_public_access_cidrs : can(cidrhost(cidr, 0))])

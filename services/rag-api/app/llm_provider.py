@@ -9,6 +9,9 @@ from app.vector_store import VectorSearchResult
 class LLMProvider(Protocol):
     """Interface for answer generation providers."""
 
+    provider_name: str
+    model_name: str
+
     def generate_answer(
         self,
         question: str,
@@ -40,6 +43,9 @@ def build_rag_prompt(question: str, retrieved_context: Sequence[VectorSearchResu
 
 class MockLLMProvider:
     """Deterministic local LLM provider for tests and development."""
+
+    provider_name = "mock"
+    model_name = "mock-local"
 
     def generate_answer(
         self,
@@ -75,6 +81,7 @@ class OpenAICompatibleLLMProvider:
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
+        self.provider_name = "vllm"
         self.client = client or httpx.Client(timeout=timeout_seconds)
 
     def _chat_completions_url(self) -> str:

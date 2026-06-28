@@ -88,6 +88,28 @@ Response:
 {"status":"ok","service":"rag-api"}
 ```
 
+## Metrics
+
+The API exposes Prometheus metrics at `/metrics`:
+
+```bash
+curl http://127.0.0.1:8000/metrics
+```
+
+Key metric families:
+
+- `rag_api_http_requests_total`
+- `rag_api_http_request_latency_seconds`
+- `rag_api_ask_latency_seconds`
+- `rag_api_qdrant_retrieval_latency_seconds`
+- `rag_api_llm_provider_latency_seconds`
+- `rag_api_retrieved_chunk_count`
+- `rag_api_errors_total`
+
+LLM latency is labeled by provider and model name where safe. Mock mode reports
+`provider="mock"` and vLLM mode reports `provider="vllm"` with the configured
+`MODEL_NAME`.
+
 ## Documents
 
 ```bash

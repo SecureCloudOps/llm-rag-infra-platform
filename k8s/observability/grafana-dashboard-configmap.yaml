@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-rag-platform-dashboard
+  namespace: observability
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: llm-rag-infra-platform
+data:
+  rag-platform.json: |
+    {
+      "annotations": {
+        "list": []
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "links": [],
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "targets": [
+            {
+              "expr": "sum(rate(rag_api_http_requests_total[5m])) by (path)",
+              "legendFormat": "{{path}}"
+            }
+          ],
+          "title": "RAG API Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 0
+          },
+          "id": 2,
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(rag_api_http_request_latency_seconds_bucket[5m])) by (le, path))",
+              "legendFormat": "p95 {{path}}"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(rag_api_ask_latency_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p95 /ask"
+            }
+          ],
+          "title": "HTTP and Ask Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 0
+          },
+          "id": 3,
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(rag_api_llm_provider_latency_seconds_bucket[5m])) by (le, provider, model_name))",
+              "legendFormat": "p95 {{provider}} {{model_name}}"
+            }
+          ],
+          "title": "LLM Provider Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 0,
+            "y": 8
+          },
+          "id": 4,
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(rag_api_qdrant_retrieval_latency_seconds_bucket[5m])) by (le, endpoint))",
+              "legendFormat": "p95 {{endpoint}}"
+            }
+          ],
+          "title": "Qdrant Retrieval Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 8,
+            "y": 8
+          },
+          "id": 5,
+          "targets": [
+            {
+              "expr": "sum(rate(rag_api_errors_total[5m])) by (endpoint, error_type)",
+              "legendFormat": "{{endpoint}} {{error_type}}"
+            }
+          ],
+          "title": "RAG API Errors",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {},
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 16,
+            "y": 8
+          },
+          "id": 6,
+          "targets": [
+            {
+              "expr": "sum(rate(rag_api_retrieved_chunk_count_sum[5m])) by (endpoint) / sum(rate(rag_api_retrieved_chunk_count_count[5m])) by (endpoint)",
+              "legendFormat": "avg {{endpoint}}"
+            }
+          ],
+          "title": "Retrieved Chunk Count",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": [
+        "rag",
+        "llm",
+        "infrastructure"
+      ],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "timezone": "browser",
+      "title": "LLM RAG Infrastructure Platform",
+      "uid": "llm-rag-platform"
+    }

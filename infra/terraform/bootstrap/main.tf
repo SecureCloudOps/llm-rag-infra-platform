@@ -116,6 +116,19 @@ resource "aws_s3_bucket" "terraform_state" {
   force_destroy = var.force_destroy_state_bucket
 }
 
+resource "aws_kms_key" "terraform_state" {
+  description             = "KMS key for Terraform state bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = var.tags
+}
+
+resource "aws_kms_alias" "terraform_state" {
+  name          = "alias/${var.state_bucket_name}-terraform-state"
+  target_key_id = aws_kms_key.terraform_state.key_id
+}
+
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -151,7 +164,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = aws_kms_key.terraform_state.arn
+      sse_algorithm     = "aws:kms"
     }
   }
 }

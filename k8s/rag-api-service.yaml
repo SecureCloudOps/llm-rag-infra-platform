@@ -5,6 +5,9 @@ metadata:
   namespace: ai-system
   annotations:
     argocd.argoproj.io/sync-wave: "3"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8000"
+    prometheus.io/scrape: "true"
   labels:
     app.kubernetes.io/name: rag-api
     app.kubernetes.io/part-of: llm-rag-infra-platform

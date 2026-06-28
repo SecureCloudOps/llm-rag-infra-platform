@@ -74,10 +74,10 @@ For more detail on component responsibilities and target deployment boundaries, 
 Initial scaffold:
 
 - CI validates the RAG API tests, optional lint configuration, Docker image build, and Kubernetes manifest rendering
-- `services/rag-api`: minimal FastAPI service with `GET /health`
+- `services/rag-api`: FastAPI RAG service with health, document, search, ask, and Prometheus metrics endpoints
 - `docs/architecture.md`: target architecture and component responsibilities
 - `infra/terraform`: Terraform entry point for cloud infrastructure
-- `k8s`: Kubernetes manifest areas for platform components
+- `k8s`: Kubernetes manifests for app workloads, autoscaling, and lightweight observability
 - `.github/workflows`: CI/CD workflow definitions
 - `scripts`: operational and developer helper scripts
 
@@ -208,12 +208,11 @@ MODEL_NAME=placeholder-local-model
 ```
 
 `MODEL_NAME` intentionally matches the default in `k8s/vllm/configmap.yaml`.
-The vLLM Deployment still defaults to `replicas: 0`, so set a real model and
-scale it when you are ready to run inference:
+The vLLM Deployment is paired with a dev HPA that keeps at least one placeholder
+replica available. Set a real model before using it for inference:
 
 ```bash
 kubectl set env deployment/vllm -n ai-system MODEL_NAME=your-public-test-model
-kubectl scale deployment/vllm -n ai-system --replicas=1
 ```
 
 Render or apply the Kubernetes stack from the repository root:
@@ -222,6 +221,62 @@ Render or apply the Kubernetes stack from the repository root:
 kubectl kustomize k8s/
 kubectl apply -k k8s/
 ```
+
+## Autoscaling
+
+The Kubernetes stack includes two `autoscaling/v2` HorizontalPodAutoscalers:
+
+- `rag-api`: min `2`, max `5`, scales on CPU and memory utilization.
+- `vllm`: min `1`, max `3`, scales on CPU as a portable dev default.
+
+Qdrant remains a StatefulSet without an HPA. Vector databases need careful
+capacity planning around storage, shard layout, and replication, so this dev
+stack keeps Qdrant scaling explicit.
+
+The vLLM HPA includes comments for the production path: GPU-serving workloads
+should eventually scale from accelerator-aware metrics such as DCGM GPU
+utilization, queue depth, tokens per second, or request latency exposed through
+custom or external metrics.
+
+## Observability
+
+`k8s/observability/` deploys a lightweight Prometheus and Grafana stack in the
+`observability` namespace. It uses ConfigMaps and anonymous local Grafana access
+for a dev-friendly setup, and does not include real secrets.
+
+Prometheus scrapes:
+
+- `rag-api.ai-system.svc.cluster.local:8000/metrics`
+- `vllm.ai-system.svc.cluster.local:8000/metrics` when vLLM exposes it
+- Kubernetes pods and services annotated with `prometheus.io/scrape=true`
+
+The RAG API exposes Prometheus metrics at `/metrics`:
+
+```bash
+curl http://127.0.0.1:8000/metrics
+```
+
+Open Grafana locally from a cluster:
+
+```bash
+kubectl port-forward -n observability svc/grafana 3000:3000
+```
+
+Then visit <http://127.0.0.1:3000>. The provisioned dashboard is named
+`LLM RAG Infrastructure Platform`.
+
+### AI Inference Latency Metrics
+
+Inference latency is one of the main capacity signals for AI infrastructure.
+CPU and memory show resource pressure, but generation latency shows the user
+impact of model size, batching behavior, prompt length, retrieval quality, and
+provider health.
+
+The API records mock and vLLM provider latency separately with safe labels for
+`provider` and `model_name`. In a portfolio demo, these metrics prove that the
+platform can distinguish API latency, retrieval latency, model-provider latency,
+retrieved context size, and error rate instead of treating every slow answer as
+the same problem.
 
 ## Argo CD GitOps Deployment
 
@@ -233,6 +288,10 @@ The manifests use Argo CD sync waves for dependency ordering:
 - Wave `1`: Qdrant storage, Service, and StatefulSet
 - Wave `2`: vLLM Deployment and Service
 - Wave `3`: RAG API Deployment, Service, and NetworkPolicies
+- Wave `4`: app HPAs after their target Deployments exist
+
+Observability resources use wave `-1` so the namespace, Prometheus, Grafana,
+RBAC, Services, and dashboards are created before app monitoring targets.
 
 This ordering matters because the RAG API reads ConfigMaps, connects to Qdrant, and calls the vLLM service in Kubernetes mode. GitOps ordering reduces avoidable rollout noise by creating foundational resources and service dependencies before workloads that consume them.
 

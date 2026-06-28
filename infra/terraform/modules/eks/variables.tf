@@ -31,7 +31,7 @@ variable "cluster_endpoint_public_access_cidrs" {
 variable "cluster_endpoint_public_access" {
   description = "Whether the EKS API endpoint is reachable from the public internet, limited by cluster_endpoint_public_access_cidrs."
   type        = bool
-  default     = true
+  default     = false
 
   validation {
     condition     = var.cluster_endpoint_public_access || var.cluster_endpoint_private_access
@@ -43,6 +43,16 @@ variable "cluster_endpoint_private_access" {
   description = "Whether the EKS API endpoint is reachable from inside the VPC."
   type        = bool
   default     = true
+}
+
+variable "cluster_security_group_egress_cidrs" {
+  description = "CIDR blocks allowed for EKS control plane security group egress."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.cluster_security_group_egress_cidrs) > 0 && alltrue([for cidr in var.cluster_security_group_egress_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "cluster_security_group_egress_cidrs must contain at least one valid CIDR block."
+  }
 }
 
 variable "vpc_id" {

@@ -1,7 +1,9 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from time import perf_counter
+
+from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
 from app.config import get_settings
@@ -17,6 +19,16 @@ from app.llm_provider import (
     MockLLMProvider,
     OpenAICompatibleLLMProvider,
     build_rag_prompt,
+)
+from app.metrics import (
+    ASK_LATENCY_SECONDS,
+    ERRORS_TOTAL,
+    HTTP_REQUEST_LATENCY_SECONDS,
+    HTTP_REQUESTS_TOTAL,
+    metrics_content_type,
+    metrics_response_body,
+    observe_llm_generation,
+    observe_retrieval,
 )
 from app.vector_store import QdrantVectorStore, VectorStore
 
@@ -120,9 +132,44 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def record_http_metrics(request: Request, call_next) -> Response:  # type: ignore[no-untyped-def]
+    start = perf_counter()
+    path = request.url.path
+    status_code = 500
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    except Exception as exc:
+        ERRORS_TOTAL.labels(endpoint=path, error_type=type(exc).__name__).inc()
+        raise
+    finally:
+        elapsed = perf_counter() - start
+        HTTP_REQUEST_LATENCY_SECONDS.labels(method=request.method, path=path).observe(
+            elapsed
+        )
+        HTTP_REQUESTS_TOTAL.labels(
+            method=request.method,
+            path=path,
+            status_code=str(status_code),
+        ).inc()
+        if status_code >= 500:
+            ERRORS_TOTAL.labels(endpoint=path, error_type=f"HTTP_{status_code}").inc()
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(status="ok", service="rag-api")
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    return Response(
+        content=metrics_response_body(),
+        media_type=metrics_content_type(),
+    )
 
 
 @app.post("/documents/upload", response_model=DocumentUploadResponse)
@@ -141,11 +188,19 @@ async def upload_document(
             vector_store=vector_store,
         )
     except UnsupportedDocumentTypeError as exc:
+        ERRORS_TOTAL.labels(
+            endpoint="/documents/upload",
+            error_type=type(exc).__name__,
+        ).inc()
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=str(exc),
         ) from exc
     except DocumentDecodeError as exc:
+        ERRORS_TOTAL.labels(
+            endpoint="/documents/upload",
+            error_type=type(exc).__name__,
+        ).inc()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
@@ -175,7 +230,13 @@ def search(
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> SearchResponse:
     query_embedding = embedding_provider.embed(request.query)
-    results = vector_store.search(query_embedding=query_embedding, top_k=request.top_k)
+    results = observe_retrieval(
+        endpoint="/search",
+        search_call=lambda: vector_store.search(
+            query_embedding=query_embedding,
+            top_k=request.top_k,
+        ),
+    )
 
     return SearchResponse(
         query=request.query,
@@ -198,17 +259,30 @@ def ask(
     vector_store: VectorStore = Depends(get_vector_store),
     llm_provider: LLMProvider = Depends(get_llm_provider),
 ) -> AskResponse:
-    question_embedding = embedding_provider.embed(request.question)
-    retrieved_context = vector_store.search(query_embedding=question_embedding, top_k=3)
-    prompt = build_rag_prompt(
-        question=request.question,
-        retrieved_context=retrieved_context,
-    )
-    answer = llm_provider.generate_answer(
-        question=request.question,
-        retrieved_context=retrieved_context,
-        prompt=prompt,
-    )
+    ask_start = perf_counter()
+    try:
+        question_embedding = embedding_provider.embed(request.question)
+        retrieved_context = observe_retrieval(
+            endpoint="/ask",
+            search_call=lambda: vector_store.search(
+                query_embedding=question_embedding,
+                top_k=3,
+            ),
+        )
+        prompt = build_rag_prompt(
+            question=request.question,
+            retrieved_context=retrieved_context,
+        )
+        answer = observe_llm_generation(
+            provider=llm_provider,
+            generation_call=lambda: llm_provider.generate_answer(
+                question=request.question,
+                retrieved_context=retrieved_context,
+                prompt=prompt,
+            ),
+        )
+    finally:
+        ASK_LATENCY_SECONDS.observe(perf_counter() - ask_start)
 
     return AskResponse(
         question=request.question,

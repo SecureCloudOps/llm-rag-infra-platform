@@ -28,6 +28,17 @@ resource "aws_s3_bucket" "documents" {
   force_destroy = var.force_destroy
 }
 
+resource "aws_kms_key" "documents" {
+  description             = "KMS key for document bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "documents" {
+  name_prefix   = "alias/${var.bucket_prefix}"
+  target_key_id = aws_kms_key.documents.key_id
+}
+
 resource "aws_s3_bucket_public_access_block" "documents" {
   bucket = aws_s3_bucket.documents.id
 
@@ -58,7 +69,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "documents" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = aws_kms_key.documents.arn
+      sse_algorithm     = "aws:kms"
     }
   }
 }

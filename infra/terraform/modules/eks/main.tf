@@ -64,12 +64,23 @@ resource "aws_security_group" "cluster" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.cluster_security_group_egress_cidrs
   }
 
   tags = {
     Name = "${var.cluster_name}-cluster"
   }
+}
+
+resource "aws_kms_key" "eks_secrets" {
+  description             = "KMS key for EKS Kubernetes secret envelope encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+}
+
+resource "aws_kms_alias" "eks_secrets" {
+  name          = "alias/${var.cluster_name}-eks-secrets"
+  target_key_id = aws_kms_key.eks_secrets.key_id
 }
 
 resource "aws_iam_role" "cluster" {
@@ -104,6 +115,14 @@ resource "aws_eks_cluster" "this" {
     public_access_cidrs     = var.cluster_endpoint_public_access_cidrs
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(var.private_subnet_ids, var.public_subnet_ids)
+  }
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_secrets.arn
+    }
+
+    resources = ["secrets"]
   }
 
   depends_on = [
