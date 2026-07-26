@@ -32,7 +32,7 @@ RAG API, Qdrant, and vLLM.
 ## Immutable application image
 
 ```text
-ghcr.io/securecloudops/llm-rag-infra-platform/rag-api:10334517d6e2c94b370d4d630f33939e829c8d5b
+ghcr.io/securecloudops/llm-rag-infra-platform/rag-api:10334517d6e2c94b370d4d630f33939e829c8d5b # gitleaks:allow -- public immutable Git commit SHA
 ```
 
 The Kind overlay intentionally uses the mock LLM provider so the complete RAG
@@ -45,4 +45,3 @@ kind create cluster --name llm-rag-platform-demo
 kubectl apply -k deploy/kind
 kubectl get deploy,statefulset,pods,svc,pvc,networkpolicy -A
 ```
-
