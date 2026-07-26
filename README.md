@@ -257,6 +257,32 @@ kubectl kustomize k8s/
 kubectl apply -k k8s/
 ```
 
+### Local Kind Deployment
+
+The Kind overlay keeps the AWS-oriented base manifests unchanged while using
+Kind's `standard` storage class, selecting mock inference, and omitting HPAs
+because a default Kind cluster does not include Metrics Server.
+
+Create a dedicated cluster and render the overlay:
+
+```bash
+kind create cluster --name llm-rag-platform-demo
+kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kind \
+  > /tmp/llm-rag-kind-rendered.yaml
+kubectl apply -f /tmp/llm-rag-kind-rendered.yaml
+```
+
+Verify the workloads:
+
+```bash
+kubectl get pods,pvc,services -n ai-system
+kubectl get pods,services -n observability
+```
+
+The vLLM Deployment intentionally remains at zero replicas in this local
+overlay. The RAG API uses its deterministic mock provider, so the upload,
+search, ask, and metrics workflow remains fully testable without a GPU.
+
 ## Autoscaling
 
 The Kubernetes stack includes two `autoscaling/v2` HorizontalPodAutoscalers:

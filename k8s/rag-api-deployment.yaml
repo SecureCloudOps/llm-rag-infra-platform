@@ -37,6 +37,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: rag-api-config
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 100m
@@ -66,3 +69,6 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 3
             failureThreshold: 3
+      volumes:
+        - name: tmp
+          emptyDir: {}
