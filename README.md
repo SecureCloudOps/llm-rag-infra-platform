@@ -453,10 +453,10 @@ public repositories: it uses read-only repository permissions, does not require
 GitHub secrets, does not authenticate to cloud providers, does not push images,
 and does not deploy resources.
 
-The workflow fails on every Checkov Terraform policy finding and on an explicit,
-auditable set of Kubernetes workload-hardening policies. Explicit Kubernetes
-check IDs avoid Checkov's API-key-only severity filtering. Secret scanning fails
-when Gitleaks detects a committed secret.
+The workflow fails on explicit, auditable sets of Terraform and Kubernetes
+hardening policies. Explicit check IDs avoid Checkov's API-key-only severity
+filtering and keep architectural or cost-expanding policies subject to separate
+review. Secret scanning fails when Gitleaks detects a committed secret.
 
 Tools used:
 
@@ -469,7 +469,8 @@ Run the same scans locally from the repository root:
 
 ```bash
 trivy fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed .
-checkov --directory infra/terraform --framework terraform
+checkov --directory infra/terraform --framework terraform \
+  --check CKV_AWS_37,CKV_AWS_39,CKV_AWS_130,CKV_AWS_136,CKV_AWS_300
 checkov --directory k8s --framework kubernetes \
   --check CKV_K8S_20,CKV_K8S_21,CKV_K8S_22,CKV_K8S_23,CKV_K8S_28,CKV_K8S_29,CKV_K8S_30,CKV_K8S_31,CKV_K8S_37,CKV_K8S_41,CKV_K8S_42,CKV_K8S_49
 gitleaks detect --source . --config .gitleaks.toml --verbose

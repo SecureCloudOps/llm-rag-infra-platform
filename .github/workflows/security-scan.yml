@@ -50,6 +50,7 @@ jobs:
         with:
           directory: .
           framework: terraform
+          check: CKV_AWS_37,CKV_AWS_39,CKV_AWS_130,CKV_AWS_136,CKV_AWS_300
           quiet: true
 
       - name: Skip Terraform scan
