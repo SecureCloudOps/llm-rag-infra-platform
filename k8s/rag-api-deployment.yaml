@@ -28,7 +28,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: rag-api
-          image: ghcr.io/example/llm-rag-infra-platform/rag-api:latest
+          image: ghcr.io/securecloudops/llm-rag-infra-platform/rag-api:10334517d6e2c94b370d4d630f33939e829c8d5b
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
