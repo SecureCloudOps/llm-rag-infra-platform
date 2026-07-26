@@ -20,6 +20,9 @@ Built as a public, safe-to-share infrastructure portfolio project demonstrating
 cloud-native AI platform engineering without exposing secrets, private
 endpoints, cloud account IDs, or claims of a live production deployment.
 
+Reproducible deployment, application, observability, CI, and security evidence
+is indexed in [`evidence/README.md`](evidence/README.md).
+
 ## What This Demonstrates
 
 - End-to-end RAG API with document upload, chunking, vector search, generation,
