@@ -18,31 +18,15 @@ variable "cluster_version" {
   }
 }
 
-variable "cluster_endpoint_public_access_cidrs" {
-  description = "CIDR blocks allowed to reach the public EKS API endpoint when public endpoint access is enabled."
-  type        = list(string)
-
-  validation {
-    condition     = alltrue([for cidr in var.cluster_endpoint_public_access_cidrs : can(cidrhost(cidr, 0))])
-    error_message = "cluster_endpoint_public_access_cidrs must contain valid CIDR blocks."
-  }
-}
-
-variable "cluster_endpoint_public_access" {
-  description = "Whether the EKS API endpoint is reachable from the public internet, limited by cluster_endpoint_public_access_cidrs."
-  type        = bool
-  default     = false
-
-  validation {
-    condition     = var.cluster_endpoint_public_access || var.cluster_endpoint_private_access
-    error_message = "At least one EKS endpoint access mode must be enabled."
-  }
-}
-
 variable "cluster_endpoint_private_access" {
   description = "Whether the EKS API endpoint is reachable from inside the VPC."
   type        = bool
   default     = true
+
+  validation {
+    condition     = var.cluster_endpoint_private_access
+    error_message = "Private EKS endpoint access must remain enabled because public endpoint access is disabled."
+  }
 }
 
 variable "cluster_security_group_egress_cidrs" {

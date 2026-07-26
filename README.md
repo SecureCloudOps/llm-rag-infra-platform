@@ -379,12 +379,11 @@ and `aws-ebs-csi-driver`. Review the pins whenever `cluster_version` changes.
 Node capacity is split into independently configurable `system` and `workloads`
 managed node groups.
 
-The dev EKS API endpoint remains public but restricted by
-`cluster_endpoint_public_access_cidrs`, with private endpoint access also
-enabled. For private-only production, set:
+The EKS API endpoint is private-only. Operators need an approved VPC access
+path, such as VPN, bastion, or AWS Systems Manager, before they can administer
+the cluster.
 
 ```hcl
-cluster_endpoint_public_access  = false
 cluster_endpoint_private_access = true
 ```
 
@@ -454,9 +453,10 @@ public repositories: it uses read-only repository permissions, does not require
 GitHub secrets, does not authenticate to cloud providers, does not push images,
 and does not deploy resources.
 
-The workflow fails on high or critical severity findings from infrastructure
-and filesystem scanners. Secret scanning fails when Gitleaks detects a committed
-secret.
+The workflow fails on every Checkov Terraform policy finding and on an explicit,
+auditable set of Kubernetes workload-hardening policies. Explicit Kubernetes
+check IDs avoid Checkov's API-key-only severity filtering. Secret scanning fails
+when Gitleaks detects a committed secret.
 
 Tools used:
 
@@ -469,8 +469,9 @@ Run the same scans locally from the repository root:
 
 ```bash
 trivy fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed .
-checkov --directory . --framework terraform --check HIGH,CRITICAL
-checkov --directory k8s --framework kubernetes --check HIGH,CRITICAL
+checkov --directory infra/terraform --framework terraform
+checkov --directory k8s --framework kubernetes \
+  --check CKV_K8S_20,CKV_K8S_21,CKV_K8S_22,CKV_K8S_23,CKV_K8S_28,CKV_K8S_29,CKV_K8S_30,CKV_K8S_31,CKV_K8S_37,CKV_K8S_41,CKV_K8S_42,CKV_K8S_49
 gitleaks detect --source . --config .gitleaks.toml --verbose
 ```
 

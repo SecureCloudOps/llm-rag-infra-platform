@@ -7,7 +7,8 @@ for the platform environment.
 
 - EKS control plane security group
 - IAM role and policy attachment for the EKS cluster
-- EKS cluster with API, audit, and authenticator logs enabled
+- Private-only EKS API endpoint
+- EKS cluster with all five control-plane log types enabled
 - EKS OIDC provider for IRSA
 - IRSA role for the AWS EBS CSI Driver
 - IAM role and policy attachments for worker nodes
@@ -18,9 +19,7 @@ for the platform environment.
 
 - `cluster_name`
 - `cluster_version`
-- `cluster_endpoint_public_access`
 - `cluster_endpoint_private_access`
-- `cluster_endpoint_public_access_cidrs`
 - `vpc_id`
 - `public_subnet_ids`
 - `private_subnet_ids`

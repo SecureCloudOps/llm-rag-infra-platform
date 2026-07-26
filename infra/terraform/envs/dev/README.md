@@ -40,15 +40,11 @@ available if an AZ-local NAT Gateway fails.
 
 ## EKS
 
-The cluster keeps private endpoint access enabled. Public endpoint access is
-enabled for dev and restricted by `cluster_endpoint_public_access_cidrs`; replace
-the example documentation CIDR with trusted workstation or VPN egress ranges
-before applying.
-
-For private-only production clusters, use:
+The cluster uses a private-only EKS API endpoint. Operators must connect through
+an approved VPC path such as a VPN, bastion, or AWS Systems Manager session.
+Public endpoint access is disabled in the EKS module.
 
 ```hcl
-cluster_endpoint_public_access  = false
 cluster_endpoint_private_access = true
 ```
 
@@ -99,9 +95,8 @@ Create a local variable file from the safe example:
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` for your account and workstation. In particular,
-restrict `cluster_endpoint_public_access_cidrs` to trusted IP ranges before
-applying.
+Edit `terraform.tfvars` for your account and environment. Confirm that operators
+have a private network path to the EKS API before applying.
 
 Initialize and validate with the default local backend before remote backend
 configuration exists:

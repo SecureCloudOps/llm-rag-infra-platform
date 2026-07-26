@@ -63,6 +63,11 @@ output "rag_api_ecr_image_tag_mutability" {
   value       = module.ecr.image_tag_mutability
 }
 
+output "rag_api_ecr_kms_key_arn" {
+  description = "ARN of the customer-managed KMS key used to encrypt rag-api images."
+  value       = module.ecr.kms_key_arn
+}
+
 output "uploaded_documents_bucket_name" {
   description = "S3 bucket name for uploaded documents."
   value       = module.storage.document_bucket_name

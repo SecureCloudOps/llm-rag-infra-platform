@@ -185,6 +185,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
       noncurrent_days = 90
     }
   }
+
+  rule {
+    id     = "abort-incomplete-multipart-uploads"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 }
 
 resource "aws_iam_openid_connect_provider" "github_actions" {
