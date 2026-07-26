@@ -20,4 +20,6 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Render kustomize manifests
-        run: kubectl kustomize k8s/
+        run: |
+          kubectl kustomize k8s/
+          kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kind

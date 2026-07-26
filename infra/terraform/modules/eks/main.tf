@@ -107,12 +107,13 @@ resource "aws_eks_cluster" "this" {
     "api",
     "audit",
     "authenticator",
+    "controllerManager",
+    "scheduler",
   ]
 
   vpc_config {
     endpoint_private_access = var.cluster_endpoint_private_access
-    endpoint_public_access  = var.cluster_endpoint_public_access
-    public_access_cidrs     = var.cluster_endpoint_public_access_cidrs
+    endpoint_public_access  = false
     security_group_ids      = [aws_security_group.cluster.id]
     subnet_ids              = concat(var.private_subnet_ids, var.public_subnet_ids)
   }

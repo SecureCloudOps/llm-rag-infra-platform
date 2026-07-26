@@ -24,17 +24,15 @@ module "networking" {
 module "eks" {
   source = "../../modules/eks"
 
-  cluster_name                         = local.cluster_name
-  cluster_version                      = var.cluster_version
-  cluster_endpoint_public_access       = var.cluster_endpoint_public_access
-  cluster_endpoint_private_access      = var.cluster_endpoint_private_access
-  cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
-  cluster_security_group_egress_cidrs  = [var.vpc_cidr]
-  vpc_id                               = module.networking.vpc_id
-  public_subnet_ids                    = module.networking.public_subnet_ids
-  private_subnet_ids                   = module.networking.private_subnet_ids
-  eks_addons                           = var.eks_addons
-  node_groups                          = var.node_groups
+  cluster_name                        = local.cluster_name
+  cluster_version                     = var.cluster_version
+  cluster_endpoint_private_access     = var.cluster_endpoint_private_access
+  cluster_security_group_egress_cidrs = [var.vpc_cidr]
+  vpc_id                              = module.networking.vpc_id
+  public_subnet_ids                   = module.networking.public_subnet_ids
+  private_subnet_ids                  = module.networking.private_subnet_ids
+  eks_addons                          = var.eks_addons
+  node_groups                         = var.node_groups
 }
 
 module "ecr" {

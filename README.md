@@ -20,6 +20,9 @@ Built as a public, safe-to-share infrastructure portfolio project demonstrating
 cloud-native AI platform engineering without exposing secrets, private
 endpoints, cloud account IDs, or claims of a live production deployment.
 
+Reproducible deployment, application, observability, CI, and security evidence
+is indexed in [`evidence/README.md`](evidence/README.md).
+
 ## What This Demonstrates
 
 - End-to-end RAG API with document upload, chunking, vector search, generation,
@@ -187,6 +190,21 @@ Remove the local Qdrant volume as well:
 docker compose down -v
 ```
 
+### Docker Compose Smoke Test
+
+With the Compose stack running, execute the repeatable end-to-end check from
+the repository root:
+
+```bash
+scripts/compose-smoke-test.sh
+```
+
+The script waits for Qdrant and the RAG API, uploads the committed sample
+document, verifies document statistics, exercises semantic search and the mock
+RAG answer flow, and confirms that the expected Prometheus metrics are exposed.
+Use `RAG_API_URL`, `QDRANT_HTTP_URL`, or `SMOKE_TEST_FILE` to override its local
+defaults.
+
 ### Python
 
 From `services/rag-api`:
@@ -241,6 +259,32 @@ Render or apply the Kubernetes stack from the repository root:
 kubectl kustomize k8s/
 kubectl apply -k k8s/
 ```
+
+### Local Kind Deployment
+
+The Kind overlay keeps the AWS-oriented base manifests unchanged while using
+Kind's `standard` storage class, selecting mock inference, and omitting HPAs
+because a default Kind cluster does not include Metrics Server.
+
+Create a dedicated cluster and render the overlay:
+
+```bash
+kind create cluster --name llm-rag-platform-demo
+kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kind \
+  > /tmp/llm-rag-kind-rendered.yaml
+kubectl apply -f /tmp/llm-rag-kind-rendered.yaml
+```
+
+Verify the workloads:
+
+```bash
+kubectl get pods,pvc,services -n ai-system
+kubectl get pods,services -n observability
+```
+
+The vLLM Deployment intentionally remains at zero replicas in this local
+overlay. The RAG API uses its deterministic mock provider, so the upload,
+search, ask, and metrics workflow remains fully testable without a GPU.
 
 ## Autoscaling
 
@@ -338,12 +382,11 @@ and `aws-ebs-csi-driver`. Review the pins whenever `cluster_version` changes.
 Node capacity is split into independently configurable `system` and `workloads`
 managed node groups.
 
-The dev EKS API endpoint remains public but restricted by
-`cluster_endpoint_public_access_cidrs`, with private endpoint access also
-enabled. For private-only production, set:
+The EKS API endpoint is private-only. Operators need an approved VPC access
+path, such as VPN, bastion, or AWS Systems Manager, before they can administer
+the cluster.
 
 ```hcl
-cluster_endpoint_public_access  = false
 cluster_endpoint_private_access = true
 ```
 
@@ -413,9 +456,10 @@ public repositories: it uses read-only repository permissions, does not require
 GitHub secrets, does not authenticate to cloud providers, does not push images,
 and does not deploy resources.
 
-The workflow fails on high or critical severity findings from infrastructure
-and filesystem scanners. Secret scanning fails when Gitleaks detects a committed
-secret.
+The workflow fails on explicit, auditable sets of Terraform and Kubernetes
+hardening policies. Explicit check IDs avoid Checkov's API-key-only severity
+filtering and keep architectural or cost-expanding policies subject to separate
+review. Secret scanning fails when Gitleaks detects a committed secret.
 
 Tools used:
 
@@ -428,8 +472,10 @@ Run the same scans locally from the repository root:
 
 ```bash
 trivy fs --scanners vuln,misconfig,secret --severity HIGH,CRITICAL --exit-code 1 --ignore-unfixed .
-checkov --directory . --framework terraform --check HIGH,CRITICAL
-checkov --directory k8s --framework kubernetes --check HIGH,CRITICAL
+checkov --directory infra/terraform --framework terraform \
+  --check CKV_AWS_37,CKV_AWS_39,CKV_AWS_130,CKV_AWS_136,CKV_AWS_300
+checkov --directory k8s --framework kubernetes \
+  --check CKV_K8S_20,CKV_K8S_21,CKV_K8S_22,CKV_K8S_23,CKV_K8S_28,CKV_K8S_29,CKV_K8S_30,CKV_K8S_31,CKV_K8S_37,CKV_K8S_41,CKV_K8S_42,CKV_K8S_49
 gitleaks detect --source . --config .gitleaks.toml --verbose
 ```
 

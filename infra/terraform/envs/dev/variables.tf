@@ -81,31 +81,14 @@ variable "cluster_version" {
   }
 }
 
-variable "cluster_endpoint_public_access" {
-  description = "Whether the EKS API endpoint is reachable publicly. Keep false unless a dev workstation CIDR is explicitly required."
-  type        = bool
-  default     = false
-
-  validation {
-    condition     = var.cluster_endpoint_public_access || var.cluster_endpoint_private_access
-    error_message = "At least one EKS endpoint access mode must be enabled."
-  }
-}
-
 variable "cluster_endpoint_private_access" {
   description = "Allow the EKS API endpoint to be reached from inside the VPC."
   type        = bool
   default     = true
-}
-
-variable "cluster_endpoint_public_access_cidrs" {
-  description = "CIDR blocks allowed to reach the public EKS API endpoint when public access is enabled."
-  type        = list(string)
-  default     = ["10.40.0.0/16"]
 
   validation {
-    condition     = alltrue([for cidr in var.cluster_endpoint_public_access_cidrs : can(cidrhost(cidr, 0))])
-    error_message = "cluster_endpoint_public_access_cidrs must contain valid CIDR blocks."
+    condition     = var.cluster_endpoint_private_access
+    error_message = "Private EKS endpoint access must remain enabled because public endpoint access is disabled."
   }
 }
 
