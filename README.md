@@ -187,6 +187,21 @@ Remove the local Qdrant volume as well:
 docker compose down -v
 ```
 
+### Docker Compose Smoke Test
+
+With the Compose stack running, execute the repeatable end-to-end check from
+the repository root:
+
+```bash
+scripts/compose-smoke-test.sh
+```
+
+The script waits for Qdrant and the RAG API, uploads the committed sample
+document, verifies document statistics, exercises semantic search and the mock
+RAG answer flow, and confirms that the expected Prometheus metrics are exposed.
+Use `RAG_API_URL`, `QDRANT_HTTP_URL`, or `SMOKE_TEST_FILE` to override its local
+defaults.
+
 ### Python
 
 From `services/rag-api`:
