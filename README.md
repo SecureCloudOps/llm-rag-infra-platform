@@ -20,6 +20,25 @@ Built as a public, safe-to-share infrastructure portfolio project demonstrating
 cloud-native AI platform engineering without exposing secrets, private
 endpoints, cloud account IDs, or claims of a live production deployment.
 
+## Why This Matters
+
+- **Faster AI delivery:** A reusable RAG service and repeatable deployment paths
+  reduce the time required to move document-based AI use cases from prototype
+  to a controlled platform environment.
+- **Lower operational risk:** Health probes, persistent storage, workload
+  isolation, metrics, dashboards, and automated smoke tests make failures
+  easier to detect, diagnose, and prevent from reaching users.
+- **Security built into delivery:** Gitleaks, Trivy, Checkov, non-root
+  containers, network policies, encryption-oriented Terraform, and CI gates
+  identify security issues before infrastructure or application changes are
+  promoted.
+- **Cost-conscious validation:** Docker Compose and Kind provide realistic,
+  reproducible environments for development and demonstrations without
+  requiring continuously running cloud infrastructure.
+- **Auditable engineering evidence:** Versioned infrastructure, immutable image
+  references, passing workflows, runtime logs, and monitoring screenshots give
+  reviewers a traceable record of what was built and verified.
+
 ## Verified Rebuild Evidence
 
 The rebuild was reproduced on a dedicated Kind cluster without creating or
