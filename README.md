@@ -20,8 +20,24 @@ Built as a public, safe-to-share infrastructure portfolio project demonstrating
 cloud-native AI platform engineering without exposing secrets, private
 endpoints, cloud account IDs, or claims of a live production deployment.
 
-Reproducible deployment, application, observability, CI, and security evidence
-is indexed in [`evidence/README.md`](evidence/README.md).
+## Verified Rebuild Evidence
+
+The rebuild was reproduced on a dedicated Kind cluster without creating or
+changing billable AWS resources.
+
+- [Kind deployment and workload status](evidence/kind-deployment.md)
+- [End-to-end RAG smoke-test results](evidence/application-smoke-test.md)
+- [GitHub Actions and security-scan results](evidence/ci-security.md)
+- [Terraform validation without apply](evidence/terraform-validation.md)
+- [Complete evidence index and scope statement](evidence/README.md)
+
+### Grafana RAG dashboard
+
+[![Grafana dashboard showing RAG API request rate, latency, and errors](evidence/screenshots/grafana-rag-dashboard.jpg)](evidence/screenshots/grafana-rag-dashboard.jpg)
+
+### Prometheus targets
+
+[![Prometheus showing healthy Kubernetes and RAG API scrape targets](evidence/screenshots/prometheus-targets.jpg)](evidence/screenshots/prometheus-targets.jpg)
 
 ## What This Demonstrates
 
