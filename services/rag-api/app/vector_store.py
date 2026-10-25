@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
+from app.auth import Principal
+
 
 @dataclass(frozen=True)
 class VectorStoreChunk:
@@ -25,23 +27,31 @@ class VectorSearchResult:
 
 
 class VectorStore(Protocol):
-    """Interface for vector database implementations."""
+    """Store and retrieve only data owned by an authenticated principal."""
 
     def ensure_collection(self, vector_size: int) -> None:
-        """Create backing collection/indexes when they do not exist."""
         raise NotImplementedError
 
     def add_chunks(self, chunks: list[VectorStoreChunk]) -> None:
-        """Store embedded document chunks and metadata."""
         raise NotImplementedError
 
-    def get_stats(self) -> VectorStoreStats:
-        """Return document and chunk counts."""
+    def get_stats(self, principal: Principal) -> VectorStoreStats:
         raise NotImplementedError
 
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
-        """Return the most similar chunks for an embedding."""
+    def search(
+        self, query_embedding: list[float], top_k: int, principal: Principal
+    ) -> list[VectorSearchResult]:
         raise NotImplementedError
+
+
+def owner_filter(principal: Principal) -> Any:
+    """Qdrant evaluates authorization *before* ranking or returning points."""
+    from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+    return Filter(must=[
+        FieldCondition(key="tenant_id", match=MatchValue(value=principal.tenant_id)),
+        FieldCondition(key="owner_id", match=MatchValue(value=principal.user_id)),
+    ])
 
 
 class QdrantVectorStore:
@@ -55,6 +65,14 @@ class QdrantVectorStore:
 
     def ensure_collection(self, vector_size: int) -> None:
         if self.client.collection_exists(collection_name=self.collection_name):
+            info = self.client.get_collection(collection_name=self.collection_name)
+            configured_vectors = info.config.params.vectors
+            actual_size = getattr(configured_vectors, "size", None)
+            if actual_size != vector_size:
+                raise ValueError(
+                    f"Collection {self.collection_name!r} has vector size {actual_size}; "
+                    f"expected {vector_size}. Use a new versioned collection and re-ingest."
+                )
             return
 
         from qdrant_client.models import Distance, VectorParams
@@ -71,18 +89,16 @@ class QdrantVectorStore:
         from qdrant_client.models import PointStruct
 
         points = [
-            PointStruct(
-                id=str(uuid4()),
-                vector=chunk.embedding,
-                payload=chunk.metadata,
-            )
+            PointStruct(id=str(uuid4()), vector=chunk.embedding, payload=chunk.metadata)
             for chunk in chunks
         ]
         self.client.upsert(collection_name=self.collection_name, points=points)
 
-    def get_stats(self) -> VectorStoreStats:
+    def get_stats(self, principal: Principal) -> VectorStoreStats:
+        scope = owner_filter(principal)
         total_chunks = self.client.count(
             collection_name=self.collection_name,
+            count_filter=scope,
             exact=True,
         ).count
 
@@ -94,6 +110,7 @@ class QdrantVectorStore:
                 collection_name=self.collection_name,
                 limit=256,
                 offset=offset,
+                scroll_filter=scope,
                 with_payload=True,
                 with_vectors=False,
             )
@@ -111,10 +128,13 @@ class QdrantVectorStore:
             total_chunks=total_chunks,
         )
 
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
+    def search(
+        self, query_embedding: list[float], top_k: int, principal: Principal
+    ) -> list[VectorSearchResult]:
         response = self.client.query_points(
             collection_name=self.collection_name,
             query=query_embedding,
+            query_filter=owner_filter(principal),
             limit=top_k,
             with_payload=True,
         )
@@ -122,6 +142,12 @@ class QdrantVectorStore:
         results: list[VectorSearchResult] = []
         for point in response.points:
             payload = point.payload or {}
+            # Reject malformed/unscoped legacy points even if query evaluation changes.
+            if (
+                payload.get("tenant_id") != principal.tenant_id
+                or payload.get("owner_id") != principal.user_id
+            ):
+                continue
             results.append(
                 VectorSearchResult(
                     chunk_text=str(payload.get("chunk_text", "")),
