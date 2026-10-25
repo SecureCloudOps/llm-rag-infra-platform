@@ -5,11 +5,19 @@ metadata:
 ---
 apiVersion: v1
 data:
-  COLLECTION_NAME: documents
+  COLLECTION_NAME: documents-minilm-v1
   LLM_PROVIDER: vllm
   MODEL_NAME: placeholder-local-model
   QDRANT_URL: http://qdrant:6333
   VLLM_BASE_URL: http://vllm.ai-system.svc.cluster.local:8000/v1
+  EMBEDDING_PROVIDER: sentence_transformers
+  EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+  EMBEDDING_MODEL_REVISION: c9745ed1d9f207416be6d2e6f8de32d1f16199bf
+  EMBEDDING_DIMENSIONS: '384'
+  EMBEDDING_DEVICE: cpu
+  EMBEDDING_CACHE_DIR: /models
+  HF_HOME: /models/hf
+  OMP_NUM_THREADS: '2'
 kind: ConfigMap
 metadata:
   name: rag-api-config
@@ -141,26 +149,38 @@ spec:
           name: http
           protocol: TCP
         readinessProbe:
-          failureThreshold: 3
           httpGet:
-            path: /health
+            path: /ready
             port: http
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 3
+          failureThreshold: 3
         resources:
-          limits:
-            cpu: 500m
-            memory: 512Mi
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: '2'
+            memory: 2Gi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
             drop:
             - ALL
           readOnlyRootFilesystem: true
+        startupProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 90
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: embedding-cache
+          mountPath: /models
       securityContext:
         fsGroup: 1000
         runAsGroup: 1000
@@ -168,6 +188,12 @@ spec:
         runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
+      volumes:
+      - name: embedding-cache
+        persistentVolumeClaim:
+          claimName: embedding-cache
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -375,3 +401,16 @@ spec:
   podSelector: {}
   policyTypes:
   - Ingress
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: embedding-cache
+  namespace: ai-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi

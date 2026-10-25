@@ -57,20 +57,6 @@ class FakeQdrantClient:
         return SimpleNamespace(points=self.query_points_result)
 
 
-def test_qdrant_ensure_collection_skips_existing_collection() -> None:
-    client = FakeQdrantClient(collection_exists=True)
-    store = QdrantVectorStore(
-        url="http://qdrant:6333",
-        collection_name="documents",
-        client=client,
-    )
-
-    store.ensure_collection(vector_size=8)
-
-    assert client.collection_exists_name == "documents"
-    assert client.created_collections == []
-
-
 def test_qdrant_stats_counts_documents_and_chunks() -> None:
     client = FakeQdrantClient()
     client.count_result = SimpleNamespace(count=3)

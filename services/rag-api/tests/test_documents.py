@@ -4,7 +4,6 @@ from app.document_service import process_text_upload
 from app.main import app, get_vector_store
 from app.vector_store import VectorStoreChunk, VectorStoreStats
 
-
 client = TestClient(app)
 
 

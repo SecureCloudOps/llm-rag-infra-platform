@@ -40,22 +40,31 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: embedding-cache
+              mountPath: /models
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
               cpu: 500m
-              memory: 512Mi
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
             readOnlyRootFilesystem: true
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 90
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
@@ -70,5 +79,8 @@ spec:
             timeoutSeconds: 3
             failureThreshold: 3
       volumes:
+        - name: embedding-cache
+          persistentVolumeClaim:
+            claimName: embedding-cache
         - name: tmp
           emptyDir: {}

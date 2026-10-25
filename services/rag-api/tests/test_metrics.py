@@ -6,7 +6,6 @@ from app.llm_provider import MockLLMProvider
 from app.main import app, get_embedding_provider, get_llm_provider, get_vector_store
 from app.vector_store import VectorSearchResult
 
-
 client = TestClient(app)
 
 

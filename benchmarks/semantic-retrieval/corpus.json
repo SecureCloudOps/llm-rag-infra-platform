@@ -1,0 +1,62 @@
+[
+  {
+    "id": "iam-least-privilege",
+    "text": "IAM least privilege: Give each service role only the actions and resource ARNs needed for its job. Avoid wildcard permissions. Review unused permissions with access analysis and remove them. Use temporary role credentials instead of long-lived access keys."
+  },
+  {
+    "id": "k8s-crashloop",
+    "text": "Kubernetes CrashLoopBackOff: Inspect kubectl logs --previous and kubectl describe pod. Check the last termination reason, exit code, events, missing configuration, and failed health probes. Fix the application or configuration before restarting the deployment."
+  },
+  {
+    "id": "k8s-drain",
+    "text": "Kubernetes maintenance: Run kubectl cordon to prevent new scheduling on a node. Run kubectl drain to evict workloads gracefully before maintenance. Respect PodDisruptionBudgets to preserve availability. After maintenance, uncordon the node so pods can schedule again."
+  },
+  {
+    "id": "monitoring-alerts",
+    "text": "Monitoring alerts: Page the on-call engineer for sustained user-impacting symptoms such as high error rates or latency. Use a duration window to suppress transient spikes. Route low-urgency signals to tickets. Link each actionable alert to a runbook."
+  },
+  {
+    "id": "incident-response",
+    "text": "Incident response: Declare an incident, appoint an incident commander, and open a shared timeline. Stabilize service by rolling back a bad deployment or failing over. Preserve evidence, communicate status, and write a blameless postmortem with corrective actions after recovery."
+  },
+  {
+    "id": "security-secrets",
+    "text": "Secret management: Never commit passwords or API tokens to source control. Store secrets in a managed secret vault and inject them at runtime. If a credential leaks, revoke it immediately, rotate the replacement, and audit access logs for misuse."
+  },
+  {
+    "id": "backup-recovery",
+    "text": "Backup recovery: Schedule encrypted backups and keep copies in a separate account or region. Test restoring data regularly. Recovery point objective defines acceptable data loss; recovery time objective defines how quickly service must be restored. A successful backup job alone does not prove recoverability."
+  },
+  {
+    "id": "network-private",
+    "text": "Cloud network isolation: Put databases in private subnets without public IP addresses. Allow inbound database traffic only from the application security group on the required port. Use private endpoints for managed services and restrict unnecessary outbound traffic."
+  },
+  {
+    "id": "qdrant-reindex",
+    "text": "Qdrant vector migration: Changing the embedding model or vector dimensions requires a new versioned collection. Re-embed original source documents with the new model and index them into the new collection. Validate retrieval before switching traffic. Keep the old collection for rollback; never reinterpret old vectors."
+  },
+  {
+    "id": "k8s-readiness",
+    "text": "Kubernetes health probes: Readiness determines whether a pod receives service traffic. Liveness restarts a stuck container. A startup probe gives slow initialization time to finish before liveness checks begin. Mark an API ready only after its required model and database have initialized."
+  },
+  {
+    "id": "billing-tags",
+    "text": "Cloud billing: Apply cost allocation tags to resources, assign budgets per team, and review monthly spending forecasts. Reserved capacity can reduce predictable compute expenses."
+  },
+  {
+    "id": "dns-cache",
+    "text": "DNS caching: Recursive resolvers cache answers until the time to live expires. Lower TTL before planned hostname migrations and monitor resolution failures."
+  },
+  {
+    "id": "image-build",
+    "text": "Container builds: Use multi-stage builds to minimize runtime image size. Exclude source build tools from production layers and pin base images to immutable digests."
+  },
+  {
+    "id": "storage-lifecycle",
+    "text": "Object storage lifecycle policies transition older objects to archival tiers and remove expired temporary files. Choose retention periods according to business requirements."
+  },
+  {
+    "id": "tls-renewal",
+    "text": "TLS certificates authenticate endpoints and encrypt traffic in transit. Automate certificate renewal before expiration and monitor handshake errors."
+  }
+]

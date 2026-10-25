@@ -1,0 +1,212 @@
+[
+  {
+    "id": "q01",
+    "question": "How can I limit what a workload is allowed to do in my cloud account?",
+    "relevant_document_ids": [
+      "iam-least-privilege"
+    ]
+  },
+  {
+    "id": "q02",
+    "question": "What should replace permanent programmatic credentials for a service?",
+    "relevant_document_ids": [
+      "iam-least-privilege"
+    ]
+  },
+  {
+    "id": "q03",
+    "question": "How do we reduce excessive privileges assigned to an application?",
+    "relevant_document_ids": [
+      "iam-least-privilege"
+    ]
+  },
+  {
+    "id": "q04",
+    "question": "A container keeps dying and being relaunched. Where do I start investigating?",
+    "relevant_document_ids": [
+      "k8s-crashloop"
+    ]
+  },
+  {
+    "id": "q05",
+    "question": "How can I read output from the previous failed pod container?",
+    "relevant_document_ids": [
+      "k8s-crashloop"
+    ]
+  },
+  {
+    "id": "q06",
+    "question": "What evidence helps diagnose repeated workload restarts?",
+    "relevant_document_ids": [
+      "k8s-crashloop"
+    ]
+  },
+  {
+    "id": "q07",
+    "question": "How do I safely remove a worker machine from service for patching?",
+    "relevant_document_ids": [
+      "k8s-drain"
+    ]
+  },
+  {
+    "id": "q08",
+    "question": "How can I stop new pods landing on a server before repairs?",
+    "relevant_document_ids": [
+      "k8s-drain"
+    ]
+  },
+  {
+    "id": "q09",
+    "question": "What protects application availability during planned pod evictions?",
+    "relevant_document_ids": [
+      "k8s-drain"
+    ]
+  },
+  {
+    "id": "q10",
+    "question": "How can we avoid waking engineers for brief harmless metric spikes?",
+    "relevant_document_ids": [
+      "monitoring-alerts"
+    ]
+  },
+  {
+    "id": "q11",
+    "question": "Which signals should trigger an urgent notification to the responder?",
+    "relevant_document_ids": [
+      "monitoring-alerts"
+    ]
+  },
+  {
+    "id": "q12",
+    "question": "What operational guidance should accompany an alarm?",
+    "relevant_document_ids": [
+      "monitoring-alerts"
+    ]
+  },
+  {
+    "id": "q13",
+    "question": "What should the team do when a release causes a major outage?",
+    "relevant_document_ids": [
+      "incident-response"
+    ]
+  },
+  {
+    "id": "q14",
+    "question": "Who coordinates responders during a service disruption?",
+    "relevant_document_ids": [
+      "incident-response"
+    ]
+  },
+  {
+    "id": "q15",
+    "question": "How should we learn from an outage after restoring availability?",
+    "relevant_document_ids": [
+      "incident-response"
+    ]
+  },
+  {
+    "id": "q16",
+    "question": "An access token was accidentally pushed to a public repository. What next?",
+    "relevant_document_ids": [
+      "security-secrets"
+    ]
+  },
+  {
+    "id": "q17",
+    "question": "Where should production passwords live instead of application code?",
+    "relevant_document_ids": [
+      "security-secrets"
+    ]
+  },
+  {
+    "id": "q18",
+    "question": "How do we investigate abuse after a credential disclosure?",
+    "relevant_document_ids": [
+      "security-secrets"
+    ]
+  },
+  {
+    "id": "q19",
+    "question": "How can we prove that saved database copies will actually restore?",
+    "relevant_document_ids": [
+      "backup-recovery"
+    ]
+  },
+  {
+    "id": "q20",
+    "question": "Which recovery goal specifies the maximum amount of lost data?",
+    "relevant_document_ids": [
+      "backup-recovery"
+    ]
+  },
+  {
+    "id": "q21",
+    "question": "What metric defines the allowed time to bring a service back?",
+    "relevant_document_ids": [
+      "backup-recovery"
+    ]
+  },
+  {
+    "id": "q22",
+    "question": "How should I keep a database unreachable from the public internet?",
+    "relevant_document_ids": [
+      "network-private"
+    ]
+  },
+  {
+    "id": "q23",
+    "question": "What firewall rule lets only the application connect to its data store?",
+    "relevant_document_ids": [
+      "network-private"
+    ]
+  },
+  {
+    "id": "q24",
+    "question": "How can services communicate without exposing public endpoints?",
+    "relevant_document_ids": [
+      "network-private"
+    ]
+  },
+  {
+    "id": "q25",
+    "question": "Can I reuse stored vectors after switching to a different encoder?",
+    "relevant_document_ids": [
+      "qdrant-reindex"
+    ]
+  },
+  {
+    "id": "q26",
+    "question": "What is a safe rollout strategy for changing semantic search models?",
+    "relevant_document_ids": [
+      "qdrant-reindex"
+    ]
+  },
+  {
+    "id": "q27",
+    "question": "How do I rebuild a similarity index with a different vector length?",
+    "relevant_document_ids": [
+      "qdrant-reindex"
+    ]
+  },
+  {
+    "id": "q28",
+    "question": "How do I prevent traffic reaching an API before its model has loaded?",
+    "relevant_document_ids": [
+      "k8s-readiness"
+    ]
+  },
+  {
+    "id": "q29",
+    "question": "Which health check should restart an unresponsive process?",
+    "relevant_document_ids": [
+      "k8s-readiness"
+    ]
+  },
+  {
+    "id": "q30",
+    "question": "How can a slow-starting container avoid being killed during initialization?",
+    "relevant_document_ids": [
+      "k8s-readiness"
+    ]
+  }
+]

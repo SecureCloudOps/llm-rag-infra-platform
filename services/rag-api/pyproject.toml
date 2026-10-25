@@ -8,20 +8,34 @@ version = "0.1.0"
 description = "FastAPI RAG API for the LLM RAG Infrastructure Platform"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115.0",
-    "httpx>=0.27.0",
-    "prometheus-client>=0.20.0",
-    "pydantic>=2.8.0",
-    "python-multipart>=0.0.9",
-    "qdrant-client~=1.12.0",
-    "uvicorn[standard]>=0.30.0",
+    "fastapi==0.115.6",
+    "httpx==0.28.1",
+    "prometheus-client==0.21.1",
+    "pydantic==2.10.4",
+    "python-multipart==0.0.20",
+    "qdrant-client==1.12.2",
+    "sentence-transformers==3.3.1",
+    "transformers==4.46.3",
+    "huggingface-hub==0.26.5",
+    "numpy==1.26.4",
+    "torch==2.5.1+cpu",
+    "uvicorn[standard]==0.34.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0.0",
+    "pytest==8.3.4",
+    "ruff==0.8.4",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+markers = ["integration: requires a real Qdrant server and cached/downloadable real model"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

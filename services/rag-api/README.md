@@ -17,7 +17,7 @@ the default and uses non-secret local configuration:
 
 ```text
 QDRANT_URL=http://qdrant:6333
-COLLECTION_NAME=documents
+COLLECTION_NAME=documents-minilm-v1
 LLM_PROVIDER=mock
 VLLM_BASE_URL=http://vllm:8001
 MODEL_NAME=mistral-7b-instruct
@@ -30,9 +30,10 @@ The API is available at <http://127.0.0.1:8000>.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -r requirements.lock
+pip install --no-deps --no-build-isolation -e .
 export QDRANT_URL=http://localhost:6333
-export COLLECTION_NAME=documents
+export COLLECTION_NAME=documents-minilm-v1
 export LLM_PROVIDER=mock
 uvicorn app.main:app --reload
 ```
@@ -127,3 +128,11 @@ Response:
 ```bash
 pytest
 ```
+
+## Semantic embeddings
+
+The default embedding provider is CPU Sentence Transformers with MiniLM, 384 dimensions,
+and a pinned model revision. `LLM_PROVIDER=mock` only controls answer generation.
+See [embedding operations](../../docs/semantic-embeddings.md) for the complete architecture,
+cache volumes, readiness, settings, and safe collection migration.
+See [benchmark instructions and results](../../benchmarks/semantic-retrieval/README.md).

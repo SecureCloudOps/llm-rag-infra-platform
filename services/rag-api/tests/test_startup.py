@@ -1,45 +1,41 @@
-from dataclasses import dataclass
-
 from fastapi.testclient import TestClient
 
 from app import main
+from app.embeddings import MockEmbeddingProvider
 
 
-@dataclass(frozen=True)
-class FakeSettings:
-    qdrant_url: str = "http://qdrant:6333"
-    collection_name: str = "documents"
+class FakeStore:
+    def ensure_collection(self, vector_size):
+        self.vector_size = vector_size
 
 
-class FakeEmbeddingProvider:
-    def embed(self, text: str) -> list[float]:
-        return [0.0, 0.1, 0.2]
+def test_startup_initializes_once_and_readiness():
+    store = FakeStore()
+    provider = MockEmbeddingProvider()
+    calls = []
+
+    def factory():
+        calls.append(1)
+        return provider
+
+    main.app.dependency_overrides[main.get_embedding_provider] = factory
+    main.app.dependency_overrides[main.get_vector_store] = lambda: store
+    with TestClient(main.app) as client:
+        assert client.get("/ready").status_code == 200
+        assert main.app.state.embedding_provider is provider
+        assert store.vector_size == 8
+        assert len(calls) == 1
+    assert not main.app.state.ready
 
 
-class FakeQdrantVectorStore:
-    instances: list["FakeQdrantVectorStore"] = []
+def test_startup_supports_original_embed_only_override():
+    class OriginalProvider:
+        def embed(self, text):
+            return [0.1, 0.2, 0.3]
 
-    def __init__(self, url: str, collection_name: str) -> None:
-        self.url = url
-        self.collection_name = collection_name
-        self.ensure_collection_calls: list[int] = []
-        self.instances.append(self)
-
-    def ensure_collection(self, vector_size: int) -> None:
-        self.ensure_collection_calls.append(vector_size)
-
-
-def test_startup_initializes_qdrant_collection(monkeypatch) -> None:
-    FakeQdrantVectorStore.instances.clear()
-    monkeypatch.setattr(main, "get_settings", lambda: FakeSettings())
-    monkeypatch.setattr(main, "get_embedding_provider", lambda: FakeEmbeddingProvider())
-    monkeypatch.setattr(main, "QdrantVectorStore", FakeQdrantVectorStore)
-
-    with TestClient(main.app):
-        pass
-
-    vector_store = FakeQdrantVectorStore.instances[0]
-    assert vector_store.url == "http://qdrant:6333"
-    assert vector_store.collection_name == "documents"
-    assert vector_store.ensure_collection_calls == [3]
-    assert main.app.state.vector_store is vector_store
+    store = FakeStore()
+    main.app.dependency_overrides[main.get_embedding_provider] = OriginalProvider
+    main.app.dependency_overrides[main.get_vector_store] = lambda: store
+    with TestClient(main.app) as client:
+        assert client.get("/ready").status_code == 200
+        assert store.vector_size == 3

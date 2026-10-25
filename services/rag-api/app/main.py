@@ -1,10 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-
 from time import perf_counter
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from app.config import get_settings
 from app.document_service import (
@@ -13,7 +13,7 @@ from app.document_service import (
     UnsupportedDocumentTypeError,
     process_text_upload,
 )
-from app.embeddings import EmbeddingProvider, MockEmbeddingProvider
+from app.embeddings import EmbeddingProvider, create_embedding_provider, validate_vector
 from app.llm_provider import (
     LLMProvider,
     MockLLMProvider,
@@ -85,7 +85,10 @@ class AskResponse(BaseModel):
 
 
 def get_embedding_provider() -> EmbeddingProvider:
-    return MockEmbeddingProvider()
+    provider = getattr(app.state, "embedding_provider", None)
+    if provider is None:
+        raise HTTPException(status_code=503, detail="Embedding provider is not initialized")
+    return provider
 
 
 def get_llm_provider() -> LLMProvider:
@@ -112,16 +115,40 @@ def get_vector_store() -> VectorStore:
 
 @asynccontextmanager
 async def lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
+    app_instance.state.ready = False
     settings = get_settings()
-    embedding_provider = get_embedding_provider()
-    vector_size = len(embedding_provider.embed(""))
-    vector_store = QdrantVectorStore(
-        url=settings.qdrant_url,
-        collection_name=settings.collection_name,
+    factory = app_instance.dependency_overrides.get(get_embedding_provider)
+    embedding_provider = await run_in_threadpool(
+        factory or create_embedding_provider, *([] if factory else [settings])
     )
-    vector_store.ensure_collection(vector_size=vector_size)
-    app_instance.state.vector_store = vector_store
-    yield
+    vector_size = getattr(embedding_provider, "dimensions", None)
+    if vector_size is None:
+        # Preserve the original embed-only interface for injected test providers.
+        probe = await run_in_threadpool(embedding_provider.embed, "startup validation")
+        vector_size = len(probe)
+        validate_vector(probe, vector_size)
+    store_factory = app_instance.dependency_overrides.get(get_vector_store)
+    vector_store = (
+        store_factory()
+        if store_factory
+        else QdrantVectorStore(
+            url=settings.qdrant_url,
+            collection_name=settings.collection_name,
+            embedding_identity=getattr(embedding_provider, "identity", None),
+        )
+    )
+    try:
+        await run_in_threadpool(vector_store.ensure_collection, vector_size=vector_size)
+        app_instance.state.embedding_provider = embedding_provider
+        app_instance.state.vector_store = vector_store
+        app_instance.state.ready = True
+        yield
+    finally:
+        app_instance.state.ready = False
+        app_instance.state.embedding_provider = None
+        app_instance.state.vector_store = None
+        if not store_factory:
+            await run_in_threadpool(vector_store.client.close)
 
 
 app = FastAPI(
@@ -147,9 +174,7 @@ async def record_http_metrics(request: Request, call_next) -> Response:  # type:
         raise
     finally:
         elapsed = perf_counter() - start
-        HTTP_REQUEST_LATENCY_SECONDS.labels(method=request.method, path=path).observe(
-            elapsed
-        )
+        HTTP_REQUEST_LATENCY_SECONDS.labels(method=request.method, path=path).observe(elapsed)
         HTTP_REQUESTS_TOTAL.labels(
             method=request.method,
             path=path,
@@ -161,6 +186,13 @@ async def record_http_metrics(request: Request, call_next) -> Response:  # type:
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
+    return HealthResponse(status="ok", service="rag-api")
+
+
+@app.get("/ready", response_model=HealthResponse)
+def ready() -> HealthResponse:
+    if not getattr(app.state, "ready", False):
+        raise HTTPException(status_code=503, detail="Required dependencies are not initialized")
     return HealthResponse(status="ok", service="rag-api")
 
 
@@ -181,7 +213,8 @@ async def upload_document(
     content = await file.read()
 
     try:
-        result: DocumentUploadResult = process_text_upload(
+        result: DocumentUploadResult = await run_in_threadpool(
+            process_text_upload,
             file.filename or "",
             content,
             embedding_provider=embedding_provider,

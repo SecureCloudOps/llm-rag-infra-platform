@@ -80,7 +80,7 @@ flowchart TB
 
     subgraph "RAG workflow"
         Upload["POST /documents/upload"] --> Chunk["Chunk text"]
-        Chunk --> Embed["Mock embeddings"]
+        Chunk --> Embed["Semantic embeddings (MiniLM, CPU)"]
         Embed --> Store["Store vectors and metadata"]
         Ask["POST /ask or /search"] --> QueryEmbed["Embed query"]
         QueryEmbed --> Retrieve["Retrieve relevant chunks"]
@@ -193,7 +193,7 @@ The Compose configuration uses non-secret local defaults:
 
 ```text
 QDRANT_URL=http://qdrant:6333
-COLLECTION_NAME=documents
+COLLECTION_NAME=documents-minilm-v1
 LLM_PROVIDER=mock
 VLLM_BASE_URL=http://vllm:8001
 MODEL_NAME=mistral-7b-instruct
@@ -318,7 +318,7 @@ kubectl get pods,services -n observability
 ```
 
 The vLLM Deployment intentionally remains at zero replicas in this local
-overlay. The RAG API uses its deterministic mock provider, so the upload,
+overlay. The RAG API uses semantic embeddings and a deterministic mock LLM, so the upload,
 search, ask, and metrics workflow remains fully testable without a GPU.
 
 ## Autoscaling
@@ -546,3 +546,10 @@ Use environment variables, local `.env` files excluded by `.gitignore`, and docu
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Semantic embedding operation
+
+Local RAG now defaults to CPU Sentence Transformers (384 dimensions) with Qdrant cosine search.
+See [semantic embeddings operations](docs/semantic-embeddings.md) for configuration, model caching,
+startup readiness, safe migration from mock collections, CPU installation, and validation.
+See the [retrieval benchmark](benchmarks/semantic-retrieval/README.md) for methodology and actual results.

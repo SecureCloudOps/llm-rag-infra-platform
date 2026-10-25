@@ -10,6 +10,7 @@ resources:
   - qdrant-service.yaml
   - vllm/deployment.yaml
   - vllm/service.yaml
+  - embedding-cache-pvc.yaml
   - rag-api-deployment.yaml
   - rag-api-service.yaml
   - rag-api-hpa.yaml

@@ -5,10 +5,22 @@ services:
     image: llm-rag-infra-platform/rag-api:local
     environment:
       QDRANT_URL: http://qdrant:6333
-      COLLECTION_NAME: documents
+      COLLECTION_NAME: ${COLLECTION_NAME:-documents-minilm-v1}
+      EMBEDDING_PROVIDER: sentence_transformers
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      EMBEDDING_MODEL_REVISION: c9745ed1d9f207416be6d2e6f8de32d1f16199bf
+      EMBEDDING_DIMENSIONS: "384"
+      EMBEDDING_DEVICE: cpu
+      EMBEDDING_CACHE_DIR: /models
+      HF_HOME: /models/hf
+      NO_PROXY: qdrant,localhost,127.0.0.1
+      no_proxy: qdrant,localhost,127.0.0.1
+      OMP_NUM_THREADS: "2"
       LLM_PROVIDER: mock
       VLLM_BASE_URL: http://vllm:8001
       MODEL_NAME: mistral-7b-instruct
+    volumes:
+      - embedding-cache:/models
     ports:
       - "${RAG_API_PORT:-8000}:8000"
     depends_on:
@@ -26,3 +38,4 @@ services:
 
 volumes:
   qdrant-storage:
+  embedding-cache:

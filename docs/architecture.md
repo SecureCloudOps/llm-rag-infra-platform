@@ -108,3 +108,10 @@ makes the platform easier to operate than a single black-box request timer.
 - Keep Terraform state out of the repository.
 - Avoid real AWS account IDs, private domains, or internal URLs.
 - Make deployment claims only after reproducible deployment artifacts and validation steps exist.
+
+## Semantic embedding lifecycle
+
+The API initializes one CPU MiniLM embedding model per worker during startup. Uploads batch
+chunk embeddings; queries use the same instance. Qdrant validates dimensions, cosine metric,
+and model identity/revision before accepting traffic. [Operational details and architecture
+diagram](semantic-embeddings.md) describe caching and safe collection migration.

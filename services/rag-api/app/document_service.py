@@ -3,9 +3,8 @@ from pathlib import PurePath
 from uuid import uuid4
 
 from app.chunking import chunk_text
-from app.embeddings import EmbeddingProvider, MockEmbeddingProvider
+from app.embeddings import EmbeddingProvider, validate_vector
 from app.vector_store import VectorStore, VectorStoreChunk
-
 
 SUPPORTED_TEXT_SUFFIX = ".txt"
 
@@ -42,8 +41,16 @@ def process_text_upload(
         raise DocumentDecodeError("Uploaded file must be valid UTF-8 text") from exc
 
     chunks = chunk_text(text)
-    provider = embedding_provider or MockEmbeddingProvider()
-    embeddings = [provider.embed(chunk) for chunk in chunks]
+    if embedding_provider is None:
+        raise ValueError("An explicitly configured embedding provider is required")
+    provider = embedding_provider
+    batch = getattr(provider, "embed_batch", None)
+    embeddings = batch(chunks) if batch else [provider.embed(chunk) for chunk in chunks]
+    if len(embeddings) != len(chunks):
+        raise ValueError("Embedding count does not match chunk count; document not inserted")
+    dimensions = getattr(provider, "dimensions", len(embeddings[0]) if embeddings else 0)
+    for vector in embeddings:
+        validate_vector(vector, dimensions)
 
     if vector_store is not None:
         document_id = str(uuid4())

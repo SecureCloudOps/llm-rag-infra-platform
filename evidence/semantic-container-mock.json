@@ -1,0 +1,48 @@
+{
+  "provider": "mock",
+  "collection": "semantic-smoke-60b0ffc7c4314a5b920084ed1f1e9a80-mock",
+  "image": "rag-api:semantic",
+  "image_id": "sha256:93cdf7b6d27152d55c1a2a0a27b0b8a813042d84eef41e2965bcf5b87898c1dc",
+  "ready": true,
+  "torch_cpu_version": "2.5.1+cpu",
+  "upload": {
+    "filename": "network.txt",
+    "total_chunks": 1,
+    "chunk_sizes": [
+      90
+    ],
+    "embedding_count": 1
+  },
+  "documents_before_restart": {
+    "total_documents": 1,
+    "total_chunks": 1
+  },
+  "search": {
+    "query": "How do I keep a data store off the public internet?",
+    "results": [
+      {
+        "chunk_text": "Place databases in private subnets without public IP addresses to prevent internet access.",
+        "filename": "network.txt",
+        "chunk_index": 0,
+        "score": 0.5827255
+      }
+    ]
+  },
+  "ask": {
+    "question": "How do I keep a data store off the public internet?",
+    "answer": "Mock answer for 'How do I keep a data store off the public internet?' using 1 retrieved chunk(s): network.txt#chunk-0.",
+    "sources": [
+      {
+        "filename": "network.txt",
+        "chunk_index": 0,
+        "score": 0.5827255
+      }
+    ],
+    "retrieved_chunks": 1
+  },
+  "documents_after_restart": {
+    "total_documents": 1,
+    "total_chunks": 1
+  },
+  "status": "passed"
+}

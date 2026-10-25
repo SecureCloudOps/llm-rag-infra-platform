@@ -5,7 +5,6 @@ from fastapi.testclient import TestClient
 from app.main import app, get_embedding_provider, get_vector_store
 from app.vector_store import VectorSearchResult
 
-
 client = TestClient(app)
 
 
