@@ -6,6 +6,7 @@ from time import perf_counter
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 
+from app.auth import Principal, get_principal
 from app.config import get_settings
 from app.document_service import (
     DocumentDecodeError,
@@ -13,7 +14,8 @@ from app.document_service import (
     UnsupportedDocumentTypeError,
     process_text_upload,
 )
-from app.embeddings import EmbeddingProvider, MockEmbeddingProvider
+from app.embeddings import EmbeddingProvider, MockEmbeddingProvider, semantic_provider
+from app.security import filter_untrusted_context, redact_secrets
 from app.llm_provider import (
     LLMProvider,
     MockLLMProvider,
@@ -51,8 +53,8 @@ class DocumentStatsResponse(BaseModel):
 
 
 class SearchRequest(BaseModel):
-    query: str
-    top_k: int = Field(default=3, ge=1)
+    query: str = Field(min_length=1, max_length=2000)
+    top_k: int = Field(default=3, ge=1, le=10)
 
 
 class SearchResultResponse(BaseModel):
@@ -68,7 +70,7 @@ class SearchResponse(BaseModel):
 
 
 class AskRequest(BaseModel):
-    question: str = Field(min_length=1)
+    question: str = Field(min_length=1, max_length=2000)
 
 
 class AskSourceResponse(BaseModel):
@@ -85,7 +87,12 @@ class AskResponse(BaseModel):
 
 
 def get_embedding_provider() -> EmbeddingProvider:
-    return MockEmbeddingProvider()
+    settings = get_settings()
+    if settings.embedding_provider == "mock":
+        return MockEmbeddingProvider()
+    if settings.embedding_provider == "fastembed":
+        return semantic_provider(settings.embedding_model, settings.embedding_cache_dir)
+    raise ValueError("EMBEDDING_PROVIDER must be 'mock' or 'fastembed'")
 
 
 def get_llm_provider() -> LLMProvider:
@@ -114,7 +121,7 @@ def get_vector_store() -> VectorStore:
 async def lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     embedding_provider = get_embedding_provider()
-    vector_size = len(embedding_provider.embed(""))
+    vector_size = len(embedding_provider.embed("Embedding dimension probe."))
     vector_store = QdrantVectorStore(
         url=settings.qdrant_url,
         collection_name=settings.collection_name,
@@ -175,15 +182,17 @@ def metrics() -> Response:
 @app.post("/documents/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
+    principal: Principal = Depends(get_principal),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> DocumentUploadResponse:
-    content = await file.read()
+    content = await file.read(1024 * 1024 + 1)
 
     try:
         result: DocumentUploadResult = process_text_upload(
             file.filename or "",
             content,
+            principal=principal,
             embedding_provider=embedding_provider,
             vector_store=vector_store,
         )
@@ -205,6 +214,13 @@ async def upload_document(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
+    except ValueError as exc:
+        if "Upload exceeds" not in str(exc):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=str(exc),
+        ) from exc
 
     return DocumentUploadResponse(
         filename=result.filename,
@@ -215,8 +231,11 @@ async def upload_document(
 
 
 @app.get("/documents", response_model=DocumentStatsResponse)
-def get_documents(vector_store: VectorStore = Depends(get_vector_store)) -> DocumentStatsResponse:
-    stats = vector_store.get_stats()
+def get_documents(
+    principal: Principal = Depends(get_principal),
+    vector_store: VectorStore = Depends(get_vector_store),
+) -> DocumentStatsResponse:
+    stats = vector_store.get_stats(principal=principal)
     return DocumentStatsResponse(
         total_documents=stats.total_documents,
         total_chunks=stats.total_chunks,
@@ -226,6 +245,7 @@ def get_documents(vector_store: VectorStore = Depends(get_vector_store)) -> Docu
 @app.post("/search", response_model=SearchResponse)
 def search(
     request: SearchRequest,
+    principal: Principal = Depends(get_principal),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
 ) -> SearchResponse:
@@ -235,6 +255,7 @@ def search(
         search_call=lambda: vector_store.search(
             query_embedding=query_embedding,
             top_k=request.top_k,
+            principal=principal,
         ),
     )
 
@@ -242,7 +263,7 @@ def search(
         query=request.query,
         results=[
             SearchResultResponse(
-                chunk_text=result.chunk_text,
+                chunk_text=redact_secrets(result.chunk_text),
                 filename=result.filename,
                 chunk_index=result.chunk_index,
                 score=result.score,
@@ -255,6 +276,7 @@ def search(
 @app.post("/ask", response_model=AskResponse)
 def ask(
     request: AskRequest,
+    principal: Principal = Depends(get_principal),
     embedding_provider: EmbeddingProvider = Depends(get_embedding_provider),
     vector_store: VectorStore = Depends(get_vector_store),
     llm_provider: LLMProvider = Depends(get_llm_provider),
@@ -267,8 +289,10 @@ def ask(
             search_call=lambda: vector_store.search(
                 query_embedding=question_embedding,
                 top_k=3,
+                principal=principal,
             ),
         )
+        retrieved_context = filter_untrusted_context(retrieved_context)
         prompt = build_rag_prompt(
             question=request.question,
             retrieved_context=retrieved_context,
@@ -286,7 +310,7 @@ def ask(
 
     return AskResponse(
         question=request.question,
-        answer=answer,
+        answer=redact_secrets(answer),
         sources=[
             AskSourceResponse(
                 filename=result.filename,
