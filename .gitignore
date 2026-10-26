@@ -36,3 +36,7 @@ override.tf.json
 .DS_Store
 .idea/
 .vscode/
+
+# Local bearer credentials
+*.jwt
+*.auth-header

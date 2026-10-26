@@ -1,5 +1,10 @@
 # LLM RAG Infrastructure Platform
 
+Phase 2 adds mandatory bearer authentication and tenant/document authorization to all data
+endpoints. Configure the trusted OIDC provider and use authenticated requests as described in
+[tenant security operations](docs/tenant-authz.md). Earlier unauthenticated examples describe Phase 1
+and require an Authorization header on this branch. The encoder and pinned model are unchanged.
+
 [![RAG API CI](https://img.shields.io/badge/RAG%20API%20CI-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/rag-api-ci.yml)
 [![Kubernetes Validate](https://img.shields.io/badge/Kubernetes%20Validate-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/k8s-validate.yml)
 [![Security Scan](https://img.shields.io/badge/Security%20Scan-passing-brightgreen.svg)](https://github.com/SecureCloudOps/llm-rag-infra-platform/actions/workflows/security-scan.yml)

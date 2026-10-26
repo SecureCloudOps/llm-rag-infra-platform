@@ -1,0 +1,65 @@
+{
+  "phase": 2,
+  "acceptance": "PASS",
+  "branch": "feature/tenant-authz",
+  "base_commit": "b10759f79a15f7a6cf89709261ff7eb4e9f30bb2",
+  "host_tests": {
+    "passed": 95,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 1,
+    "seconds": 35.34
+  },
+  "container_security_tests": {
+    "passed": 45,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 1,
+    "seconds": 28.48
+  },
+  "image": {
+    "tag": "rag-api:tenant-authz",
+    "id": "sha256:11af6fb240ed740b610c8c05c352eef1033737b597bdb9977a3779f146f63d7b",
+    "build": "passed",
+    "pip_check": "passed"
+  },
+  "checks": {
+    "host_pip_check": "passed",
+    "ruff": "passed",
+    "python_compile": "passed",
+    "shell_syntax": "passed",
+    "compose_config": "passed with placeholder OIDC URLs and a nonempty ephemeral validation key",
+    "kubernetes_base_render": 29,
+    "kubernetes_kind_render": 27,
+    "phase1_encoder_and_benchmark_inputs": "byte-identical to b10759f",
+    "terraform": "unchanged",
+    "push_merge_deploy": "not performed"
+  },
+  "proof": [
+    "RSA-signed JWTs with actual JWKS HTTP server and production environment initialization",
+    "Two tenants and reader/uploader/tenant_admin roles against real Qdrant v1.12.6",
+    "Real cached all-MiniLM-L6-v2 CPU inference at immutable Phase 1 revision",
+    "Trusted upload tenant/owner stamping despite forged multipart values",
+    "Owner-only ACL management, same-tenant admin, cross-tenant/non-owned UUID rejection",
+    "Permission filters before top-k retrieval, tenant-scoped document counts",
+    "Private/explicit-subject/tenant sharing, grant revocation on next request",
+    "Legacy and malformed ACL denial even for admins",
+    "Unauthorized document text and sources excluded from real integration LLM prompt/context",
+    "Faulty-adapter second-boundary test and structured audit redaction",
+    "JWT expiry/signature/issuer/audience/required claims/algorithm/rotation/outage tests"
+  ],
+  "limitations": [
+    "No live Keycloak realm provisioned; configure trusted HTTPS issuer/audience/JWKS before use.",
+    "No live deployment or remote CI/security scans executed.",
+    "Local JWT validation uses short-lived tokens; no per-request introspection.",
+    "Already in-flight retrieval may finish under its previous sharing policy.",
+    "Qdrant must remain private; production service key/TLS and ingress controls are operator prerequisites.",
+    "Phase 1 benchmark was not rerun; original encoder and evaluation inputs remain unchanged."
+  ],
+  "qdrant_service_key_integration": {
+    "status": "passed",
+    "unauthenticated_http_status": 401,
+    "configured_client": "authenticated successfully",
+    "compose_config": "passed with a nonempty ephemeral validation key; value not retained"
+  }
+}

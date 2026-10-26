@@ -1,5 +1,10 @@
 # Semantic embeddings operations
 
+Phase 2 adds mandatory bearer authentication and tenant/document authorization to all data
+endpoints. Configure the trusted OIDC provider and use authenticated requests as described in
+[tenant security operations](tenant-authz.md). Earlier unauthenticated examples describe Phase 1
+and require an Authorization header on this branch. The encoder and pinned model are unchanged.
+
 The existing FastAPI API now defaults to `SentenceTransformerEmbeddingProvider`, with
 `sentence-transformers/all-MiniLM-L6-v2`, 384 normalized values, CPU inference, and Qdrant
 cosine similarity. The LLM may remain mocked independently; no paid inference service is

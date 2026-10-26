@@ -1,5 +1,10 @@
 # RAG API
 
+Phase 2 adds mandatory bearer authentication and tenant/document authorization to all data
+endpoints. Configure the trusted OIDC provider and use authenticated requests as described in
+[tenant security operations](../../docs/tenant-authz.md). Earlier unauthenticated examples describe Phase 1
+and require an Authorization header on this branch. The encoder and pinned model are unchanged.
+
 Minimal FastAPI service for the LLM RAG Infrastructure Platform.
 
 ## Run

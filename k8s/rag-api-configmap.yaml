@@ -7,7 +7,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "0"
 data:
   QDRANT_URL: "http://qdrant:6333"
-  COLLECTION_NAME: "documents-minilm-v1"
+  COLLECTION_NAME: "documents-minilm-v2-acl"
   EMBEDDING_PROVIDER: "sentence_transformers"
   EMBEDDING_MODEL: "sentence-transformers/all-MiniLM-L6-v2"
   EMBEDDING_MODEL_REVISION: "c9745ed1d9f207416be6d2e6f8de32d1f16199bf"

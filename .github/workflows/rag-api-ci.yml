@@ -113,6 +113,7 @@ jobs:
       QDRANT_URL: http://localhost:6333
       RUN_SEMANTIC_INTEGRATION: "1"
       RUN_QDRANT_INTEGRATION: "1"
+      RUN_SECURITY_INTEGRATION: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -12,6 +12,21 @@ if [[ ! -f "${SAMPLE_FILE}" ]]; then
   exit 1
 fi
 
+# Keep bearer credentials out of process arguments and logs.
+: "${RAG_ACCESS_TOKEN_FILE:?Set RAG_ACCESS_TOKEN_FILE to a tenant_admin access-token file}"
+auth_header_file="$(mktemp)"
+trap 'rm -f "$auth_header_file"' EXIT
+python3 - "$RAG_ACCESS_TOKEN_FILE" "$auth_header_file" <<'PYTOKEN'
+import pathlib, re, sys
+token = pathlib.Path(sys.argv[1]).read_text().strip()
+if not re.fullmatch(r'[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', token):
+    raise SystemExit('Access-token file must contain one signed JWT')
+pathlib.Path(sys.argv[2]).write_text('Authorization: Bearer ' + token + '\n')
+PYTOKEN
+curl_auth() {
+  curl --header "@$auth_header_file" "$@"
+}
+
 wait_for_endpoint() {
   local name="$1"
   local url="$2"
@@ -41,19 +56,19 @@ assert_json() {
 wait_for_endpoint "Qdrant" "${QDRANT_URL}/healthz"
 wait_for_endpoint "RAG API" "${API_URL}/health"
 
-response="$(curl --fail --silent --show-error \
+response="$(curl_auth --fail --silent --show-error \
   --form "file=@${SAMPLE_FILE};type=text/plain" \
   "${API_URL}/documents/upload")"
 assert_json \
   "data['filename'] == '$(basename "${SAMPLE_FILE}")' and data['embedding_count'] >= 1" \
   "document upload generated embeddings"
 
-response="$(curl --fail --silent --show-error "${API_URL}/documents")"
+response="$(curl_auth --fail --silent --show-error "${API_URL}/documents")"
 assert_json \
   "data['total_documents'] >= 1 and data['total_chunks'] >= 1" \
   "Qdrant reports stored documents and chunks"
 
-response="$(curl --fail --silent --show-error \
+response="$(curl_auth --fail --silent --show-error \
   --header "Content-Type: application/json" \
   --data '{"query":"What is vLLM used for?","top_k":3}' \
   "${API_URL}/search")"
@@ -61,7 +76,7 @@ assert_json \
   "len(data['results']) >= 1 and 'vLLM' in data['results'][0]['chunk_text']" \
   "semantic search retrieved the expected content"
 
-response="$(curl --fail --silent --show-error \
+response="$(curl_auth --fail --silent --show-error \
   --header "Content-Type: application/json" \
   --data '{"question":"What is vLLM used for?","top_k":3}' \
   "${API_URL}/ask")"
@@ -69,7 +84,7 @@ assert_json \
   "data['retrieved_chunks'] >= 1 and len(data['sources']) >= 1 and data['answer']" \
   "RAG answer includes retrieved sources"
 
-metrics="$(curl --fail --silent --show-error "${API_URL}/metrics")"
+metrics="$(curl_auth --fail --silent --show-error "${API_URL}/metrics")"
 for metric in \
   rag_api_http_requests_total \
   rag_api_ask_latency_seconds \

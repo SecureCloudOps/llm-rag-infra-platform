@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from app.chunking import chunk_text
 from app.embeddings import EmbeddingProvider, validate_vector
+from app.security import Principal
 from app.vector_store import VectorStore, VectorStoreChunk
 
 SUPPORTED_TEXT_SUFFIX = ".txt"
@@ -23,6 +24,7 @@ class DocumentUploadResult:
     total_chunks: int
     chunk_sizes: list[int]
     embedding_count: int
+    document_id: str = ""
 
 
 def process_text_upload(
@@ -30,6 +32,9 @@ def process_text_upload(
     content: bytes,
     embedding_provider: EmbeddingProvider | None = None,
     vector_store: VectorStore | None = None,
+    principal: Principal | None = None,
+    visibility: str = "private",
+    allowed_subjects: list[str] | None = None,
 ) -> DocumentUploadResult:
     safe_filename = PurePath(filename).name
     if not safe_filename or PurePath(safe_filename).suffix.lower() != SUPPORTED_TEXT_SUFFIX:
@@ -52,8 +57,8 @@ def process_text_upload(
     for vector in embeddings:
         validate_vector(vector, dimensions)
 
+    document_id = str(uuid4())
     if vector_store is not None:
-        document_id = str(uuid4())
         vector_store.add_chunks(
             [
                 VectorStoreChunk(
@@ -64,6 +69,11 @@ def process_text_upload(
                         "filename": safe_filename,
                         "chunk_index": index,
                         "chunk_text": chunk,
+                        **({
+                            "tenant_id": principal.tenant_id, "owner_id": principal.subject,
+                            "visibility": visibility, "allowed_subjects": allowed_subjects or [],
+                            "acl_version": 1,
+                        } if principal else {}),
                     },
                 )
                 for index, (chunk, embedding) in enumerate(zip(chunks, embeddings))
@@ -75,4 +85,5 @@ def process_text_upload(
         total_chunks=len(chunks),
         chunk_sizes=[len(chunk) for chunk in chunks],
         embedding_count=len(embeddings),
+        document_id=document_id,
     )

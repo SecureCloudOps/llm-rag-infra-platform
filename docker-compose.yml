@@ -5,7 +5,11 @@ services:
     image: llm-rag-infra-platform/rag-api:local
     environment:
       QDRANT_URL: http://qdrant:6333
-      COLLECTION_NAME: ${COLLECTION_NAME:-documents-minilm-v1}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:?Set a nonempty shared QDRANT_API_KEY}
+      OIDC_ISSUER: ${OIDC_ISSUER:?Set OIDC_ISSUER to your trusted issuer}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:?Set OIDC_AUDIENCE to the API audience}
+      OIDC_JWKS_URL: ${OIDC_JWKS_URL:?Set OIDC_JWKS_URL to your trusted HTTPS JWKS endpoint}
+      COLLECTION_NAME: ${COLLECTION_NAME:-documents-minilm-v2-acl}
       EMBEDDING_PROVIDER: sentence_transformers
       EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
       EMBEDDING_MODEL_REVISION: c9745ed1d9f207416be6d2e6f8de32d1f16199bf
@@ -29,9 +33,11 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.6
+    environment:
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:?Set a nonempty shared QDRANT_API_KEY}
     ports:
-      - "${QDRANT_HTTP_PORT:-6333}:6333"
-      - "${QDRANT_GRPC_PORT:-6334}:6334"
+      - "127.0.0.1:${QDRANT_HTTP_PORT:-6333}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334"
     volumes:
       - qdrant-storage:/qdrant/storage
     restart: unless-stopped

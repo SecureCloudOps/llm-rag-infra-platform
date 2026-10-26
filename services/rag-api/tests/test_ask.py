@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+from conftest import TEST_ACL
 from fastapi.testclient import TestClient
 
 from app.llm_provider import MockLLMProvider, build_rag_prompt
@@ -27,22 +28,25 @@ class SpyVectorStore:
                 filename="vllm.txt",
                 chunk_index=0,
                 score=0.97,
+                authorization=TEST_ACL,
             ),
             VectorSearchResult(
                 chunk_text="It can run OpenAI-compatible model serving APIs.",
                 filename="serving.txt",
                 chunk_index=2,
                 score=0.91,
+                authorization=TEST_ACL,
             ),
             VectorSearchResult(
                 chunk_text="Batching requests improves throughput for generation workloads.",
                 filename="performance.txt",
                 chunk_index=4,
                 score=0.82,
+                authorization=TEST_ACL,
             ),
         ]
 
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
+    def search(self, query_embedding: list[float], top_k: int, *, access=None) -> list[VectorSearchResult]:
         self.search_calls.append({"query_embedding": query_embedding, "top_k": top_k})
         return self.results
 
@@ -107,12 +111,14 @@ def test_build_rag_prompt_includes_question_and_retrieved_chunks() -> None:
             filename="first.txt",
             chunk_index=1,
             score=0.8,
+                authorization=TEST_ACL,
         ),
         VectorSearchResult(
             chunk_text="Second chunk text.",
             filename="second.txt",
             chunk_index=3,
             score=0.7,
+                authorization=TEST_ACL,
         ),
     ]
 
@@ -140,6 +146,7 @@ def test_mock_llm_provider_generates_deterministic_answer() -> None:
             filename="guide.txt",
             chunk_index=5,
             score=0.99,
+                authorization=TEST_ACL,
         )
     ]
 

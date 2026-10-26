@@ -37,7 +37,7 @@ class Settings:
 def get_settings() -> Settings:
     return Settings(
         qdrant_url=getenv("QDRANT_URL", "http://localhost:6333"),
-        collection_name=getenv("COLLECTION_NAME", "documents-minilm-v1"),
+        collection_name=getenv("COLLECTION_NAME", "documents-minilm-v2-acl"),
         llm_provider=getenv("LLM_PROVIDER", "mock").lower(),
         vllm_base_url=getenv("VLLM_BASE_URL", "http://localhost:8001"),
         embedding_provider=getenv("EMBEDDING_PROVIDER", "sentence_transformers").lower(),

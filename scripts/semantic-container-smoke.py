@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
@@ -31,10 +32,17 @@ def main():
         help="Pre-populated Hugging Face hub cache to mount read-only at /models",
     )
     parser.add_argument("--offline", action="store_true")
+    parser.add_argument("--oidc-issuer", required=True)
+    parser.add_argument("--oidc-audience", default="rag-api")
+    parser.add_argument("--oidc-jwks-url", required=True)
+    parser.add_argument("--bearer-token-file", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.offline and not args.model_cache:
         parser.error("--offline requires --model-cache with the pinned snapshot")
+    token = args.bearer_token_file.read_text().strip()
+    if not token or any(c.isspace() for c in token):
+        parser.error("--bearer-token-file must contain one nonempty access token")
     name = "semantic-smoke-" + uuid4().hex
     collection = name + ("-mock" if args.mock else "-real")
     report = {
@@ -53,6 +61,9 @@ def main():
         f"127.0.0.1:{args.port}:8000",
         "-e",
         "QDRANT_URL=http://qdrant:6333",
+        "-e", f"OIDC_ISSUER={args.oidc_issuer}",
+        "-e", f"OIDC_AUDIENCE={args.oidc_audience}",
+        "-e", f"OIDC_JWKS_URL={args.oidc_jwks_url}",
         "-e",
         f"COLLECTION_NAME={collection}",
         "-e",
@@ -66,6 +77,8 @@ def main():
         "-e",
         "HF_HUB_DOWNLOAD_TIMEOUT=3",
     ]
+    if os.getenv("QDRANT_API_KEY"):
+        command += ["-e", "QDRANT_API_KEY"]  # inherited, never placed in argv
     if args.model_cache:
         if not args.model_cache.is_dir():
             parser.error("--model-cache must be an existing hub cache directory")
@@ -96,7 +109,8 @@ def main():
         docker(*command, args.image)
         created = True
         with httpx.Client(
-            base_url=f"http://127.0.0.1:{args.port}", timeout=10, trust_env=False
+            base_url=f"http://127.0.0.1:{args.port}", timeout=10, trust_env=False,
+            headers={"Authorization": "Bearer " + token},
         ) as client:
 
             def wait_ready():
@@ -104,8 +118,7 @@ def main():
                 while time.monotonic() < deadline:
                     if docker("inspect", "-f", "{{.State.Running}}", name) != "true":
                         raise RuntimeError(
-                            "Container exited before readiness: "
-                            + docker("logs", name)[-4000:]
+                            "Container exited before readiness; inspect its audit logs locally"
                         )
                     try:
                         if client.get("/ready").status_code == 200:

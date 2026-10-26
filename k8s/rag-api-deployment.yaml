@@ -37,6 +37,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: rag-api-config
+            - configMapRef:
+                name: rag-api-oidc-config
           volumeMounts:
             - name: tmp
               mountPath: /tmp

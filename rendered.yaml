@@ -5,7 +5,7 @@ metadata:
 ---
 apiVersion: v1
 data:
-  COLLECTION_NAME: documents-minilm-v1
+  COLLECTION_NAME: documents-minilm-v2-acl
   LLM_PROVIDER: vllm
   MODEL_NAME: placeholder-local-model
   QDRANT_URL: http://qdrant:6333
@@ -133,6 +133,8 @@ spec:
       - envFrom:
         - configMapRef:
             name: rag-api-config
+        - configMapRef:
+            name: rag-api-oidc-config
         image: ghcr.io/example/llm-rag-infra-platform/rag-api:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:

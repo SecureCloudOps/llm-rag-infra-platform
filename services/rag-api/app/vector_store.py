@@ -1,8 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from os import getenv
 from typing import Any, Protocol
 from uuid import uuid4
 
 from app.embeddings import validate_vector
+from app.security import Principal, audit, can_read, require_permission
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,7 @@ class VectorSearchResult:
     chunk_index: int
     score: float
     document_id: str = ""
+    authorization: dict[str, Any] = field(default_factory=dict)
 
 
 class VectorStore(Protocol):
@@ -38,11 +41,19 @@ class VectorStore(Protocol):
         """Store embedded document chunks and metadata."""
         raise NotImplementedError
 
-    def get_stats(self) -> VectorStoreStats:
+    def get_stats(self, *, access: Principal | None = None) -> VectorStoreStats:
         """Return document and chunk counts."""
         raise NotImplementedError
 
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
+    def update_permissions(
+        self, document_id: str, access: Principal, visibility: str, allowed_subjects: list[str]
+    ) -> bool:
+        """Update sharing only for an authorized owner or same-tenant admin."""
+        raise NotImplementedError
+
+    def search(
+        self, query_embedding: list[float], top_k: int, *, access: Principal | None = None
+    ) -> list[VectorSearchResult]:
         """Return the most similar chunks for an embedding."""
         raise NotImplementedError
 
@@ -63,7 +74,7 @@ class QdrantVectorStore:
         if client is None:
             from qdrant_client import QdrantClient
 
-            client = QdrantClient(url=url)
+            client = QdrantClient(url=url, api_key=getenv("QDRANT_API_KEY") or None)
         self.client = client
 
     def ensure_collection(self, vector_size: int) -> None:
@@ -118,6 +129,19 @@ class QdrantVectorStore:
             )
         self.vector_size = vector_size
 
+    def ensure_acl_indexes(self) -> None:
+        from qdrant_client.models import PayloadSchemaType
+
+        for name in ("tenant_id", "owner_id", "visibility", "allowed_subjects", "document_id"):
+            self.client.create_payload_index(
+                self.collection_name, field_name=name,
+                field_schema=PayloadSchemaType.KEYWORD, wait=True,
+            )
+        self.client.create_payload_index(
+            self.collection_name, field_name="acl_version",
+            field_schema=PayloadSchemaType.INTEGER, wait=True,
+        )
+
     def add_chunks(self, chunks: list[VectorStoreChunk]) -> None:
         if not chunks:
             return
@@ -138,13 +162,16 @@ class QdrantVectorStore:
         ]
         self.client.upsert(collection_name=self.collection_name, points=points, wait=True)
 
-    def get_stats(self) -> VectorStoreStats:
+    def get_stats(self, *, access: Principal | None = None) -> VectorStoreStats:
+        filters = {"count_filter": access_filter(access)} if access else {}
         total_chunks = self.client.count(
             collection_name=self.collection_name,
             exact=True,
+            **filters,
         ).count
 
         document_ids: set[str] = set()
+        authorized_chunks = 0
         offset: Any | None = None
 
         while True:
@@ -154,9 +181,13 @@ class QdrantVectorStore:
                 offset=offset,
                 with_payload=True,
                 with_vectors=False,
+                **({"scroll_filter": access_filter(access)} if access else {}),
             )
             for point in points:
                 payload = point.payload or {}
+                if access and not can_read(access, payload):
+                    continue
+                authorized_chunks += 1
                 document_id = payload.get("document_id")
                 if isinstance(document_id, str):
                     document_ids.add(document_id)
@@ -166,10 +197,12 @@ class QdrantVectorStore:
 
         return VectorStoreStats(
             total_documents=len(document_ids),
-            total_chunks=total_chunks,
+            total_chunks=authorized_chunks if access else total_chunks,
         )
 
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
+    def search(
+        self, query_embedding: list[float], top_k: int, *, access: Principal | None = None
+    ) -> list[VectorSearchResult]:
         if self.vector_size is not None:
             validate_vector(query_embedding, self.vector_size)
         response = self.client.query_points(
@@ -177,11 +210,15 @@ class QdrantVectorStore:
             query=query_embedding,
             limit=top_k,
             with_payload=True,
+            **({"query_filter": access_filter(access)} if access else {}),
         )
 
         results: list[VectorSearchResult] = []
         for point in response.points:
             payload = point.payload or {}
+            if access and not can_read(access, payload):
+                audit("authorization_denial", principal=access, operation="retrieved_payload")
+                continue
             results.append(
                 VectorSearchResult(
                     chunk_text=str(payload.get("chunk_text", "")),
@@ -189,7 +226,59 @@ class QdrantVectorStore:
                     chunk_index=int(payload.get("chunk_index", 0)),
                     score=float(point.score),
                     document_id=str(payload.get("document_id", "")),
+                    authorization={k: payload[k] for k in ACL_FIELDS if k in payload},
                 )
             )
 
         return results
+
+
+    def update_permissions(
+        self, document_id: str, access: Principal, visibility: str, allowed_subjects: list[str]
+    ) -> bool:
+        """One filter-scoped update; tenant and immutable ownership are never rewritten."""
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        require_permission(access, "manage")
+        conditions = [
+            FieldCondition(key="tenant_id", match=MatchValue(value=access.tenant_id)),
+            FieldCondition(key="document_id", match=MatchValue(value=document_id)),
+            FieldCondition(key="acl_version", match=MatchValue(value=1)),
+        ]
+        if "tenant_admin" not in access.roles:
+            conditions.append(FieldCondition(key="owner_id", match=MatchValue(value=access.subject)))
+        selector = Filter(must=conditions)
+        points, _ = self.client.scroll(
+            self.collection_name, scroll_filter=selector, limit=1, with_payload=True
+        )
+        from app.security import valid_acl
+
+        if not points or not valid_acl(points[0].payload or {}):
+            return False
+        self.client.set_payload(
+            self.collection_name,
+            payload={"visibility": visibility, "allowed_subjects": allowed_subjects},
+            points=selector, wait=True,
+        )
+        return True
+
+
+ACL_FIELDS = ("tenant_id", "owner_id", "visibility", "allowed_subjects", "acl_version")
+
+
+def access_filter(access: Principal):
+    """Filter before ranking/returning any content; missing legacy ACLs never match."""
+    from qdrant_client.models import FieldCondition, Filter, MatchAny, MatchValue
+
+    require_permission(access, "read")
+    must = [
+        FieldCondition(key="tenant_id", match=MatchValue(value=access.tenant_id)),
+        FieldCondition(key="acl_version", match=MatchValue(value=1)),
+        FieldCondition(key="visibility", match=MatchAny(any=["private", "tenant"])),
+    ]
+    should = None if "tenant_admin" in access.roles else [
+        FieldCondition(key="owner_id", match=MatchValue(value=access.subject)),
+        FieldCondition(key="visibility", match=MatchValue(value="tenant")),
+        FieldCondition(key="allowed_subjects", match=MatchValue(value=access.subject)),
+    ]
+    return Filter(must=must, should=should)

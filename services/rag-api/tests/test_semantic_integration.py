@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import numpy as np
 import pytest
+from conftest import override_test_auth
 from fastapi.testclient import TestClient
 
 from app import main
@@ -29,6 +30,7 @@ def test_real_ingestion_retrieval_ask_restart_cache_and_isolation(monkeypatch):
     monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
     monkeypatch.setenv("LLM_PROVIDER", "mock")
     main.app.dependency_overrides.clear()
+    override_test_auth()
     texts = {
         "database.txt": "Place databases in private subnets without public IP addresses. Restrict access to the application security group.",
         "billing.txt": "Use cost allocation tags and review monthly cloud spending budgets.",
@@ -79,6 +81,9 @@ def test_real_ingestion_retrieval_ask_restart_cache_and_isolation(monkeypatch):
             (
                 "from fastapi.testclient import TestClient\n"
                 "from app.main import app\n"
+                "from app.security import Principal, get_current_principal, get_token_verifier\n"
+                "app.dependency_overrides[get_current_principal] = lambda: Principal('test-tenant', 'test-user', frozenset({'tenant_admin'}))\n"
+                "app.dependency_overrides[get_token_verifier] = lambda: object()\n"
                 "with TestClient(app) as client:\n"
                 "    assert client.get('/ready').status_code == 200\n"
                 "    assert client.get('/documents').json() == {'total_documents': 3, 'total_chunks': 3}\n"

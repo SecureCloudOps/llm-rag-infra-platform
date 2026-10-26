@@ -18,7 +18,7 @@ class FakeVectorStore:
     def add_chunks(self, chunks: list[VectorStoreChunk]) -> None:
         self.chunks.extend(chunks)
 
-    def get_stats(self) -> VectorStoreStats:
+    def get_stats(self, *, access=None) -> VectorStoreStats:
         return self.stats
 
 
@@ -45,7 +45,9 @@ def test_upload_text_document_returns_chunk_metadata() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
+    assert response.json()["document_id"]
     assert response.json() == {
+        "document_id": response.json()["document_id"],
         "filename": "notes.txt",
         "total_chunks": 3,
         "chunk_sizes": [500, 500, 25],

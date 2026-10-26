@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+from conftest import TEST_ACL
 from fastapi.testclient import TestClient
 
 from app.llm_provider import MockLLMProvider
@@ -16,7 +17,7 @@ class MetricsEmbeddingProvider:
 
 
 class MetricsVectorStore:
-    def search(self, query_embedding: list[float], top_k: int) -> list[VectorSearchResult]:
+    def search(self, query_embedding: list[float], top_k: int, *, access=None) -> list[VectorSearchResult]:
         del query_embedding, top_k
         return [
             VectorSearchResult(
@@ -24,6 +25,7 @@ class MetricsVectorStore:
                 filename="vllm.txt",
                 chunk_index=0,
                 score=0.95,
+                authorization=TEST_ACL,
             )
         ]
 

@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+from conftest import TEST_ACL, TEST_PRINCIPAL
 from fastapi.testclient import TestClient
 
 from app.main import app, get_embedding_provider, get_vector_store
@@ -18,12 +19,14 @@ def test_search_embeds_query_and_returns_ranked_chunks() -> None:
             filename="notes.txt",
             chunk_index=0,
             score=0.98,
+                authorization=TEST_ACL,
         ),
         VectorSearchResult(
             chunk_text="second matching chunk",
             filename="guide.txt",
             chunk_index=3,
             score=0.87,
+                authorization=TEST_ACL,
         ),
     ]
     app.dependency_overrides[get_embedding_provider] = lambda: embedding_provider
@@ -56,6 +59,7 @@ def test_search_embeds_query_and_returns_ranked_chunks() -> None:
     vector_store.search.assert_called_once_with(
         query_embedding=[0.1, 0.2, 0.3],
         top_k=3,
+        access=TEST_PRINCIPAL,
     )
 
 
@@ -77,6 +81,7 @@ def test_search_uses_requested_top_k() -> None:
     vector_store.search.assert_called_once_with(
         query_embedding=[0.4, 0.5],
         top_k=5,
+        access=TEST_PRINCIPAL,
     )
 
 
