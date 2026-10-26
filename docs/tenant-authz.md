@@ -201,3 +201,12 @@ private and shared documents, admin boundaries, malicious tenant/owner fields, t
 prefiltering, legacy/corrupt ACL denial, sharing revocation, and an LLM spy that rejects
 unauthorized content in both prompt and retrieved context. A separate faulty-adapter test
 checks the API's second boundary. See [Phase 2 evidence](../evidence/tenant-authz.md).
+
+
+## Remaining live-provider validation
+
+See [development Keycloak validation](keycloak-validation.md) and its
+[actual blocked result](../evidence/keycloak-validation.md). The official artifact download
+is currently denied; the added live test is opt-in and does not substitute synthetic tokens
+for real Keycloak issuance or claim live-provider acceptance. The existing core security
+suite was rerun successfully against Qdrant protected by a nonempty API key.

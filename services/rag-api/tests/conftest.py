@@ -1,4 +1,6 @@
 import pytest
+from keycloak_fixtures import dev_keycloak as dev_keycloak
+from keycloak_fixtures import keyed_qdrant as keyed_qdrant
 from oidc_fixtures import identity_provider as identity_provider
 
 from app.embeddings import MockEmbeddingProvider

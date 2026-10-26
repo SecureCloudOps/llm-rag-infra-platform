@@ -37,7 +37,7 @@ def test_real_qdrant_compatibility_and_restart():
     store.embedding_identity = {**MockEmbeddingProvider.identity, "model": "other"}
     with pytest.raises(ValueError, match="identity/revision"):
         store.ensure_collection(8)
-    client = QdrantClient(url=url)
+    client = QdrantClient(url=url, api_key=os.getenv("QDRANT_API_KEY") or None)
     dot_name = name + "-dot"
     client.create_collection(dot_name, vectors_config=VectorParams(size=8, distance=Distance.DOT))
     dot = QdrantVectorStore(url, dot_name, embedding_identity=MockEmbeddingProvider.identity)

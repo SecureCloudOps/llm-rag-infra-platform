@@ -1,0 +1,46 @@
+{
+  "qdrant": "1.12.6",
+  "nonempty_random_service_key": true,
+  "missing_key_http": 401,
+  "wrong_key_http": 401,
+  "authenticated_qdrant_ready": true,
+  "pytest_exit_code": 0,
+  "live_keycloak": {
+    "instance_started": false,
+    "realm_or_users_created": false,
+    "issuance_verified": false,
+    "role_mapping_verified": false,
+    "rotation_verified": false
+  },
+  "status": "BLOCKED: remaining live Keycloak acceptance cannot be confirmed",
+  "base_commit": "d2a2a59",
+  "branch": "feature/tenant-authz",
+  "regression": {
+    "passed": 95,
+    "failed": 0,
+    "skipped": 1,
+    "warnings": 5,
+    "seconds": 36.91
+  },
+  "explicit_live_keycloak_attempt": {
+    "setup_errors": 1,
+    "functional_cases_executed": 0,
+    "reason": "official Keycloak distribution not available; fixture refuses synthetic fallback"
+  },
+  "downloads": [
+    {
+      "host": "quay.io",
+      "stage": "GET https://quay.io/v2/ before manifest/layers",
+      "status": 403,
+      "observation": "Docker reports Forbidden; proxy/policy origin inferred, not independently distinguished"
+    },
+    {
+      "host": "release-assets.githubusercontent.com",
+      "stage": "HTTPS CONNECT after official GitHub ZIP redirect",
+      "status": 403,
+      "origin": "network proxy; connection refused before remote TLS/service response"
+    }
+  ],
+  "production_changes": false,
+  "push_merge_deploy": false
+}
