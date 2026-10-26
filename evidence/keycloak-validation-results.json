@@ -1,46 +1,87 @@
 {
-  "qdrant": "1.12.6",
-  "nonempty_random_service_key": true,
-  "missing_key_http": 401,
-  "wrong_key_http": 401,
-  "authenticated_qdrant_ready": true,
-  "pytest_exit_code": 0,
-  "live_keycloak": {
-    "instance_started": false,
-    "realm_or_users_created": false,
-    "issuance_verified": false,
-    "role_mapping_verified": false,
-    "rotation_verified": false
-  },
-  "status": "BLOCKED: remaining live Keycloak acceptance cannot be confirmed",
-  "base_commit": "d2a2a59",
+  "status": "PASS: remaining Phase 2 live Keycloak development acceptance",
+  "date": "2026-10-26 America/New_York",
   "branch": "feature/tenant-authz",
-  "regression": {
-    "passed": 95,
-    "failed": 0,
-    "skipped": 1,
-    "warnings": 5,
-    "seconds": 36.91
-  },
-  "explicit_live_keycloak_attempt": {
-    "setup_errors": 1,
-    "functional_cases_executed": 0,
-    "reason": "official Keycloak distribution not available; fixture refuses synthetic fallback"
-  },
-  "downloads": [
-    {
-      "host": "quay.io",
-      "stage": "GET https://quay.io/v2/ before manifest/layers",
-      "status": 403,
-      "observation": "Docker reports Forbidden; proxy/policy origin inferred, not independently distinguished"
-    },
-    {
-      "host": "release-assets.githubusercontent.com",
-      "stage": "HTTPS CONNECT after official GitHub ZIP redirect",
-      "status": 403,
-      "origin": "network proxy; connection refused before remote TLS/service response"
+  "base_commit": "2305db8",
+  "keycloak": {
+    "version": "26.1.4",
+    "image": "quay.io/keycloak/keycloak@sha256:044a457e04987e1fff756be3d2fa325a4ef420fa356b7034ecc9f1b693c32761",
+    "local_linux_amd64_image_id": "sha256:c9fd7ee1a8de8ebf03efe6d52a882a9de66646d2beb07fea03f9c1bd4aa4c96f",
+    "bundled_jvm": "OpenJDK 21.0.6",
+    "host_java_required": false,
+    "registry_pull": "succeeded; Docker verified layer checksums",
+    "network_hosts": [
+      "quay.io",
+      "cdn01.quay.io"
+    ],
+    "mode": "start-dev; dev-mem; loopback published HTTP port",
+    "realm_created": true,
+    "clients_created": [
+      "rag-api",
+      "rag-validation"
+    ],
+    "sample_users_created": 5,
+    "tenants": 2,
+    "real_token_issuance_verified": true,
+    "signature_and_claim_validation": "existing production JWTVerifier; no authentication override",
+    "required_subject_claim_fix": "Retain Keycloak 26 basic default client scope",
+    "key_rotation": {
+      "new_higher_priority_rsa_signer": true,
+      "new_kid_verified": true,
+      "new_token_accepted_after_automatic_jwks_refresh": true,
+      "old_valid_token_accepted_during_overlap": true,
+      "retired_key_cache_expiry_tested": false
     }
+  },
+  "qdrant": {
+    "version": "1.12.6",
+    "nonempty_random_api_key": true,
+    "missing_key_http": 401,
+    "wrong_key_http": 401,
+    "authenticated_access": true,
+    "tenant_isolation": "passed with live Keycloak tokens and real CPU model",
+    "service_and_test_credentials_retained": false
+  },
+  "focused_live_test": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 2,
+    "seconds": 25.8
+  },
+  "full_regression": {
+    "passed": 96,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 6,
+    "seconds": 56.14
+  },
+  "assertions": [
+    "reader upload denied with 403 after successful real OIDC authentication",
+    "uploader and tenant_admin upload permissions, trusted tenant/owner stamping",
+    "private and same-tenant shared document counts/search/ask for five users",
+    "non-owner and cross-tenant permission updates denied with 404",
+    "unauthorized retrieved sources/text absent from LLM context and prompt",
+    "real Keycloak-issued expired token and tampered signature rejected with 401",
+    "new signing key recognized and overlapping old token remains valid",
+    "all existing Phase 1/2 regressions including offline CPU inference and security tests"
   ],
-  "production_changes": false,
-  "push_merge_deploy": false
+  "checks": {
+    "ruff": "passed",
+    "python_compile": "passed",
+    "pip_check": "No broken requirements found",
+    "ci_yaml": "parsed; pinned image pull and live test opt-in enabled",
+    "test_container_cleanup": "no disposable Keycloak/Qdrant test containers left",
+    "application_implementation": "byte-identical to 2305db8",
+    "terraform_encoder_benchmark_inputs": "unchanged"
+  },
+  "production_readiness_gaps": [
+    "Dev HTTP/start-dev/password grants are not production settings.",
+    "Review a supported/patched IdP image before production; no CVE/security scanner run.",
+    "Provision HTTPS, persistent IdP database/backups/HA, managed credentials, controlled tenant/role mappings and ingress limits.",
+    "Live rotation validated overlap/new key recognition; default 300-second retired-key cache expiry was not waited through.",
+    "FastAPI exercised through full ASGI TestClient lifecycle; browser PKCE and production reverse proxy/TLS were not tested.",
+    "Protected external audit retention, metrics scrape identities, short-lived-token and in-flight revocation operational policies remain deployment work.",
+    "Remote CI was configured but not executed; no push/merge/production deployment."
+  ]
 }

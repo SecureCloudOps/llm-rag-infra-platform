@@ -58,8 +58,11 @@ in an already issued token take effect at expiration. Apply ingress authenticati
 4. Set the exact realm issuer, audience, and certs endpoint above. Permit this endpoint in
    the environment's network policy and configure the platform's CA trust if required.
 
-A live Keycloak realm was not provisioned by this change. Automated tests use real RSA-signed
-Keycloak-shaped access tokens and an actual HTTP JWKS server, including cache/rotation tests.
+The live development suite now provisions and validates an official digest-pinned Keycloak 26.1.4
+container with a disposable realm, clients and users. Retain Keycloak 26's `basic` default client
+scope so access tokens contain the required `sub` claim. The earlier synthetic-JWKS suite remains
+for isolated invalid-claim/cache tests. No production realm or credentials are provisioned by the
+application. See [live-provider setup](keycloak-validation.md).
 
 ## Roles and document policy
 
@@ -203,10 +206,10 @@ unauthorized content in both prompt and retrieved context. A separate faulty-ada
 checks the API's second boundary. See [Phase 2 evidence](../evidence/tenant-authz.md).
 
 
-## Remaining live-provider validation
+## Live-provider validation
 
-See [development Keycloak validation](keycloak-validation.md) and its
-[actual blocked result](../evidence/keycloak-validation.md). The official artifact download
-is currently denied; the added live test is opt-in and does not substitute synthetic tokens
-for real Keycloak issuance or claim live-provider acceptance. The existing core security
-suite was rerun successfully against Qdrant protected by a nonempty API key.
+[Development Keycloak acceptance](keycloak-validation.md) now passed using the official Quay
+container pinned by digest. Actual discovery, token issuance, roles, tenant/document filtering,
+unauthorized LLM-context exclusion, signing-key rotation/overlap, and invalid-token rejection
+executed with real model inference and keyed Qdrant. The full suite passed 96 tests with zero
+skips. See [actual commands, results and production gaps](../evidence/keycloak-validation.md).

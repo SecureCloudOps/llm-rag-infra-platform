@@ -17,9 +17,19 @@ pytestmark = [
     pytest.mark.keycloak,
     pytest.mark.skipif(
         os.getenv("RUN_KEYCLOAK_INTEGRATION") != "1",
-        reason="set RUN_KEYCLOAK_INTEGRATION=1 and KEYCLOAK_HOME",
+        reason="set RUN_KEYCLOAK_INTEGRATION=1 with the pinned Quay image cached",
     ),
 ]
+
+
+class BearerHeaders(dict):
+    """Keep pytest assertion representations from printing bearer credentials."""
+
+    def __init__(self, token):
+        super().__init__(Authorization="Bearer " + token)
+
+    def __repr__(self):
+        return "{'Authorization': '[REDACTED]'}"
 
 
 def test_live_keycloak_roles_tenants_rotation_and_invalid_tokens(
@@ -56,8 +66,23 @@ def test_live_keycloak_roles_tenants_rotation_and_invalid_tokens(
         assert str(main.app.state.embedding_provider._model.device) == "cpu"
         assert len(main.app.state.embedding_provider.embed("Kubernetes scheduling")) == 384
 
+        validation_failure = None
+        try:
+            main.app.state.token_verifier.verify(tokens["a-reader"])
+        except jwt.PyJWTError as exc:
+            missing = (
+                "; missing claim=" + exc.claim
+                if isinstance(exc, jwt.MissingRequiredClaimError)
+                else ""
+            )
+            validation_failure = "Live Keycloak token validation: " + type(exc).__name__ + missing
+        if validation_failure:
+            # Fail outside the exception handler so pytest cannot render a JWT-bearing
+            # decode traceback as chained exception context.
+            pytest.fail(validation_failure, pytrace=False)
+
         def auth(name):
-            return {"Authorization": "Bearer " + tokens[name]}
+            return BearerHeaders(tokens[name])
 
         def upload(name, filename, marker):
             text = "Kubernetes scheduling places pods onto suitable worker nodes. " + marker
@@ -136,25 +161,17 @@ def test_live_keycloak_roles_tenants_rotation_and_invalid_tokens(
         before = kc.token("a-reader")
         kc.rotate()
         after = kc.token("a-reader")
-        assert jwt.get_unverified_header(before)["kid"] != jwt.get_unverified_header(after)["kid"]
+        before_kid = jwt.get_unverified_header(before)["kid"]
+        after_kid = jwt.get_unverified_header(after)["kid"]
+        assert before_kid != after_kid
         for token in (after, before):
-            assert (
-                api.get("/documents", headers={"Authorization": "Bearer " + token}).status_code
-                == 200
-            )
+            assert api.get("/documents", headers=BearerHeaders(token)).status_code == 200
         # Tamper with a genuine signature, rather than issuing a local synthetic token.
         parts = after.split(".")
         parts[2] = ("A" if parts[2][0] != "A" else "B") + parts[2][1:]
-        assert (
-            api.get(
-                "/documents", headers={"Authorization": "Bearer " + ".".join(parts)}
-            ).status_code
-            == 401
-        )
+        assert api.get("/documents", headers=BearerHeaders(".".join(parts))).status_code == 401
         # Keycloak itself issues the short-lived token; no locally signed substitute.
         kc.admin("PUT", f"/{kc.realm}", json={"accessTokenLifespan": 1})
         expired = kc.token("a-reader")
         time.sleep(2)
-        assert (
-            api.get("/documents", headers={"Authorization": "Bearer " + expired}).status_code == 401
-        )
+        assert api.get("/documents", headers=BearerHeaders(expired)).status_code == 401

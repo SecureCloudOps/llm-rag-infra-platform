@@ -1,0 +1,12 @@
+.                                                                        [100%]
+=============================== warnings summary ===============================
+../.cache/phase1-final/venv/lib/python3.12/site-packages/starlette/testclient.py:40
+  /workspace/.cache/phase1-final/venv/lib/python3.12/site-packages/starlette/testclient.py:40: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = typing.Callable[[], typing.ContextManager[anyio.abc.BlockingPortal]]
+
+tests/test_keycloak_integration.py::test_live_keycloak_roles_tenants_rotation_and_invalid_tokens
+  /workspace/.cache/phase1-final/venv/lib/python3.12/site-packages/qdrant_client/qdrant_remote.py:130: UserWarning: Api key is used with an insecure connection.
+    warnings.warn("Api key is used with an insecure connection.")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1 passed, 2 warnings in 25.80s

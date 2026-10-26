@@ -1,5 +1,9 @@
 # Phase 2 tenant authentication and authorization evidence
 
+Follow-up: [real Keycloak development validation](keycloak-validation.md) now passes with
+the official digest-pinned Quay image and 96 tests. The original 95-test Phase 2 acceptance
+record below predates that live-provider follow-up.
+
 **Acceptance: PASS.** Local branch `feature/tenant-authz`, based on accepted Phase 1
 `b10759f79a15f7a6cf89709261ff7eb4e9f30bb2`. No branch push, merge, live deployment,
 Terraform changes, or Phase 3 work was performed.

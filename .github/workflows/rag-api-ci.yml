@@ -114,6 +114,7 @@ jobs:
       RUN_SEMANTIC_INTEGRATION: "1"
       RUN_QDRANT_INTEGRATION: "1"
       RUN_SECURITY_INTEGRATION: "1"
+      RUN_KEYCLOAK_INTEGRATION: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -129,6 +130,8 @@ jobs:
         run: |
           pip install -r services/rag-api/requirements.lock
           pip install --no-deps --no-build-isolation -e services/rag-api
+      - name: Pull pinned development Keycloak image
+        run: docker pull quay.io/keycloak/keycloak@sha256:044a457e04987e1fff756be3d2fa325a4ef420fa356b7034ecc9f1b693c32761
       - name: Real ingestion, ask, restart, cache and isolation
         run: python -m pytest services/rag-api/tests -m integration -v
       - name: Measure semantic and mock retrieval

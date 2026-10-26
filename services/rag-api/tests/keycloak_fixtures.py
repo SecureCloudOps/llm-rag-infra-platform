@@ -1,12 +1,10 @@
-"""Opt-in, loopback-only Keycloak dev server; credentials exist only in memory."""
+"""Opt-in, loopback-only Keycloak container with runtime-generated test credentials."""
 
 import os
 import secrets
 import socket
 import subprocess
 import time
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit
 from uuid import uuid4
 
@@ -133,7 +131,8 @@ class DevKeycloak:
                 "standardFlowEnabled": False,
                 "serviceAccountsEnabled": False,
                 "fullScopeAllowed": True,
-                "defaultClientScopes": [],
+                # Keycloak 26 supplies the required subject claim through this scope.
+                "defaultClientScopes": ["basic"],
                 "protocolMappers": mappers,
             },
         )
@@ -202,74 +201,94 @@ class DevKeycloak:
         )
 
 
+# Official Quay multi-platform digest verified by Docker during the image pull.
+KEYCLOAK_IMAGE = (
+    "quay.io/keycloak/keycloak@sha256:"
+    "044a457e04987e1fff756be3d2fa325a4ef420fa356b7034ecc9f1b693c32761"
+)
+
+
 @pytest.fixture
 def dev_keycloak():
-    home = Path(
-        os.getenv("KEYCLOAK_HOME", "/workspace/.cache/keycloak-validation/keycloak-26.1.4")
-    ).resolve()
-    executable = home / "bin/kc.sh"
-    if not executable.is_file():
-        pytest.fail(
-            "Install the official Keycloak 26.1.4 distribution and set KEYCLOAK_HOME; "
-            "the opt-in live test cannot use the synthetic JWKS fixture"
-        )
+    """Use a cached official image; never download or substitute a synthetic issuer."""
+    image = subprocess.run(
+        ["docker", "image", "inspect", KEYCLOAK_IMAGE],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if image.returncode:
+        pytest.fail("Pull the pinned official Quay Keycloak image before running the live test")
+    name = "rag-keycloak-dev-" + uuid4().hex
     origin = f"http://127.0.0.1:{unused_loopback_port()}"
     password = secrets.token_urlsafe(32)
-    with TemporaryDirectory(prefix="rag-keycloak-") as temp:
-        log = Path(temp) / "keycloak.log"
-        with log.open("wb") as output:
-            process = subprocess.Popen(
-                [
-                    "sh",
-                    str(executable),
-                    "start-dev",
-                    "--db=dev-mem",
-                    "--http-host=127.0.0.1",
-                    "--http-port=" + str(urlsplit(origin).port),
-                    "--hostname=" + origin,
-                ],
-                cwd=home,
-                env={
-                    **os.environ,
-                    "KC_BOOTSTRAP_ADMIN_USERNAME": "validation-admin",
-                    "KC_BOOTSTRAP_ADMIN_PASSWORD": password,
-                    "JAVA_OPTS_APPEND": os.getenv("JAVA_OPTS_APPEND", "")
-                    + " -Xms64m -Xmx768m -XX:ActiveProcessorCount=2",
-                },
-                stdout=output,
-                stderr=subprocess.STDOUT,
-            )
-            server = DevKeycloak(origin, password)
+    server = DevKeycloak(origin, password)
+    created = False
+    try:
+        subprocess.run(
+            [
+                "docker",
+                "run",
+                "--pull=never",
+                "--rm",
+                "-d",
+                "--name",
+                name,
+                "--publish",
+                f"127.0.0.1:{urlsplit(origin).port}:8080",
+                "--env",
+                "KC_BOOTSTRAP_ADMIN_USERNAME",
+                "--env",
+                "KC_BOOTSTRAP_ADMIN_PASSWORD",
+                "--env",
+                "JAVA_OPTS_APPEND",
+                KEYCLOAK_IMAGE,
+                "start-dev",
+                "--db=dev-mem",
+                "--http-host=0.0.0.0",
+                "--http-port=8080",
+                "--hostname=" + origin,
+            ],
+            env={
+                **os.environ,
+                "KC_BOOTSTRAP_ADMIN_USERNAME": "validation-admin",
+                "KC_BOOTSTRAP_ADMIN_PASSWORD": password,
+                "JAVA_OPTS_APPEND": os.getenv("JAVA_OPTS_APPEND", "")
+                + " -Xms64m -Xmx768m -XX:ActiveProcessorCount=2",
+            },
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        created = True
+        deadline = time.monotonic() + 150
+        while time.monotonic() < deadline:
+            running = subprocess.check_output(
+                ["docker", "inspect", "--format", "{{.State.Running}}", name], text=True
+            ).strip()
+            if running != "true":
+                pytest.fail("Development Keycloak container exited before readiness")
             try:
-                deadline = time.monotonic() + 150
-                while time.monotonic() < deadline:
-                    if process.poll() is not None:
-                        pytest.fail(
-                            "Development Keycloak exited during startup (private log not echoed)"
-                        )
-                    try:
-                        if (
-                            server.http.get(
-                                "/realms/master/.well-known/openid-configuration"
-                            ).status_code
-                            == 200
-                        ):
-                            break
-                    except httpx.HTTPError:
-                        pass
-                    time.sleep(0.25)
-                else:
-                    pytest.fail("Development Keycloak readiness timeout")
-                server.setup()
-                yield server
-            finally:
-                server.http.close()
-                process.terminate()
-                try:
-                    process.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+                if (
+                    server.http.get("/realms/master/.well-known/openid-configuration").status_code
+                    == 200
+                ):
+                    break
+            except httpx.HTTPError:
+                pass
+            time.sleep(0.25)
+        else:
+            pytest.fail("Development Keycloak readiness timeout")
+        server.setup()
+        yield server
+    finally:
+        server.http.close()
+        if created:
+            subprocess.run(
+                ["docker", "rm", "-f", name],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+            )
 
 
 @pytest.fixture

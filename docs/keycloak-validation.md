@@ -1,34 +1,35 @@
 # Development-only live Keycloak validation
 
-This is an opt-in extension of the Phase 2 security suite. **Its live Keycloak path is
-currently unverified:** the managed environment denied both official artifact download
-routes before an instance could start. See [actual results](../evidence/keycloak-validation.md).
-Existing synthetic-JWKS tests are not evidence of real Keycloak issuance.
+Live-provider development acceptance passed on 2026-10-26: **96 tests passed, zero skipped**
+with real Keycloak issuance, the existing FastAPI application, the actual pinned CPU model,
+and API-key-protected Qdrant. See [actual evidence](../evidence/keycloak-validation.md).
 
-## Prerequisites
+## Official container and prerequisites
 
-- A private, disposable local test environment, Java 21, and the official **Keycloak 26.1.4**
-  ZIP distribution extracted into a fresh writable directory outside the repository.
-  This is a development validation pin, not a production-version recommendation.
-- The installed Phase 1/2 CPU dependencies and previously verified MiniLM hub cache.
-- The managed local Docker daemon with cached `qdrant/qdrant:v1.12.6`.
-- Allow `github.com` and the release redirect host `release-assets.githubusercontent.com`
-  for the official distribution route. The original GitHub URL is:
-  `https://github.com/keycloak/keycloak/releases/download/26.1.4/keycloak-26.1.4.zip`.
-  Keep HTTPS certificate verification and the configured proxy enabled. Verify the official
-  release artifact/checksum before extraction; no artifact was downloaded or verified here.
-  The container alternative is `quay.io/keycloak/keycloak:26.1.4`, but that registry was also denied.
+The test uses Keycloak 26.1.4 from the official Quay repository, pinned to its verified
+multi-platform digest:
 
-Do not point `KEYCLOAK_HOME` at a production/shared installation. The test launches `start-dev`
-with an in-memory database and loopback-only HTTP. It does not connect to an existing realm,
-change the working application's authentication requirements, or deploy infrastructure.
+```text
+quay.io/keycloak/keycloak@sha256:044a457e04987e1fff756be3d2fa325a4ef420fa356b7034ecc9f1b693c32761
+```
 
-## Run
+Docker selects Linux amd64 here. `--version` reported Keycloak 26.1.4 with bundled OpenJDK
+21.0.6. Host Java and GitHub release archives are no longer needed. This is a reproducible
+development pin, not a production image/version recommendation; review current support and
+security updates before production use.
 
-From the repository root, in the installed validation environment:
+Required: a private local test environment, Docker, the installed Phase 1/2 Python CPU lock,
+the verified MiniLM hub cache, and cached `qdrant/qdrant:v1.12.6`. The successful image pull
+used allowed hosts `quay.io` and `cdn01.quay.io`. Keep the configured proxy, TLS verification,
+and Docker registry configuration. If another registry delivery hostname is actually reported,
+request that exact destination through the environment configuration workflow.
+
+## Run the live-provider test
+
+From the repository root, pull the pinned image once, then run:
 
 ```bash
-export KEYCLOAK_HOME=/workspace/.cache/keycloak-validation/keycloak-26.1.4
+docker pull quay.io/keycloak/keycloak@sha256:044a457e04987e1fff756be3d2fa325a4ef420fa356b7034ecc9f1b693c32761
 export EMBEDDING_CACHE_DIR=/workspace/.cache/phase1-embeddings/hub
 export HF_HOME=/workspace/.cache/phase1-embeddings
 export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 OMP_NUM_THREADS=2
@@ -37,38 +38,73 @@ RUN_KEYCLOAK_INTEGRATION=1 /workspace/.cache/phase1-final/venv/bin/python \
   -m pytest services/rag-api/tests/test_keycloak_integration.py -q
 ```
 
-The native Keycloak fixture creates a fresh random realm, a bearer resource client,
-a confidential test client with an explicit API audience/tenant/realm-role mapper,
-and five users across two tenants (`a-reader`, `a-owner`, `a-admin`, `b-owner`, `b-admin`).
-The tenant profile attribute is administrator-editable only. All passwords, client secrets,
-bootstrap credentials, and the Qdrant service key are generated at runtime and are never
-committed or printed. A local temporary log is private and removed on teardown. Do not enable
-HTTP/body debug logging or pytest `--showlocals` when running credential-bearing tests.
+Use the interpreter from your installed environment if its path differs. Model offline flags
+apply to the encoder; Keycloak authentication uses the actual local discovery/token/JWKS HTTP
+endpoints. The fixture uses `--pull=never` and fails explicitly if the pinned image is absent.
+It never substitutes a synthetic issuer. Without `RUN_KEYCLOAK_INTEGRATION=1` this opt-in case
+is skipped. The existing integration CI job now pulls the same image and enables the flag.
 
-For test issuance only, this disposable confidential client enables direct password grants.
-**Do not copy that grant configuration, HTTP transport, or `start-dev` mode to production.**
-Use authorization code + PKCE for browser clients and appropriately scoped service accounts.
-The application permits HTTP OIDC only through its existing explicit literal-loopback exception.
+The fixture owns and removes two disposable containers. Keycloak uses `start-dev`, an in-memory
+database, a random published port bound to **127.0.0.1**, and a UUID-named realm. Qdrant uses a
+separate random loopback port and nonempty random API key. Missing/wrong keys must return 401
+before the application is tested. Existing application containers, Qdrant collections/volumes,
+and production/provider configurations are untouched.
 
-The test definition covers:
+Bootstrap passwords, user passwords, client secrets, and Qdrant keys are generated at runtime.
+They are supplied by environment-variable names rather than secret command arguments, and are
+never committed or printed by the fixture. Treat the Docker daemon and host as privileged: a
+container environment is inspectable by its administrators. Containers and their in-memory
+realm are removed during teardown. Do not enable HTTP/body debug logs or pytest `--showlocals`.
+Credential-bearing assertion headers use a redacted representation.
 
-1. Actual discovery and token issuance through Keycloak's token endpoint.
-2. Full existing FastAPI ASGI startup with production environment-based JWT configuration,
-   the real pinned CPU model, and a disposable API-key-protected Qdrant service.
-3. Reader upload denial, uploader/admin uploads, private/tenant sharing, owner/admin boundaries,
-   tenant-scoped counts/search, and an LLM spy checking actual prompt/context authorization.
-4. Keycloak RSA signing-provider rotation to a higher priority, recognition of the new `kid`,
-   and overlap acceptance of the previous still-valid token. This does not test automatic
-   retired-key rejection after the entire five-minute JWKS cache lifetime.
-5. Rejection of missing credentials, a modified genuine signature, and an expired token
-   issued by Keycloak itself. Existing regressions additionally cover issuer/audience,
-   algorithm, malformed claims, JWKS outage, and synthetic key-rotation cases.
+## Realm, scopes and users
 
-The live test does not override authentication, embeddings, or storage. Its only service
-observation override is the LLM spy. Both the native Keycloak process and its disposable
-Qdrant container are stopped on teardown. Existing containers/collections are untouched.
+The development setup creates:
 
-If `RUN_KEYCLOAK_INTEGRATION` is unset the test is skipped. If explicitly selected without
-an installed distribution, it fails setup rather than substituting a fake issuer. Until
-this test executes successfully against the official distribution, its provisioning and
-rotation code must be treated as prepared test scaffolding, not validated Keycloak support.
+- Bearer resource client `rag-api` and confidential test client `rag-validation`.
+- Explicit access-token audience, tenant attribute, and `realm_access.roles` mappers.
+- Administrator-editable-only `tenant_id` profile attribute.
+- Users `a-reader`, `a-owner`, `a-admin`, `b-owner`, `b-admin` across two tenants, with reader,
+  uploader, and tenant_admin roles.
+
+**Retain Keycloak 26's `basic` default client scope.** It supplies the required `sub` claim.
+The initial empty-scope fixture issued tokens without `sub`, correctly rejected by the API
+with 401. Restoring `basic` fixed the fixture without changing or relaxing JWT validation.
+
+The confidential validation client enables password grants only to automate disposable test
+issuance. Production should use authorization code + PKCE for browser clients and properly
+scoped service accounts, with HTTPS, durable storage, secure administration and secret handling.
+The application's existing explicit loopback HTTP exception is used only inside this dev test.
+
+## Verified behavior and scope
+
+Actual Keycloak tokens authenticate through the normal environment-configured JWT verifier.
+The existing FastAPI ASGI lifecycle uses the real CPU model and real Qdrant; the only service
+observation override is an LLM spy that delegates to the existing mock answer generator after
+checking source and prompt authorization. The test verifies role-based upload restrictions,
+private/tenant sharing, owner/admin boundaries, tenant-scoped counts/search/ask, rejection of
+expired and signature-tampered tokens, and exclusion of unauthorized content from LLM input.
+
+The test creates a higher-priority RSA signer through Keycloak's admin API. A new token has a
+new `kid`; the API refreshes its JWKS and accepts it while retaining old-token overlap. It does
+not wait through the default 300-second cache TTL to test retired-key removal. Existing unit
+and security integration tests additionally verify issuer/audience, algorithms, malformed
+claims, JWKS outage, negative-key refresh bounds, ACL revocation and corrupt/legacy metadata.
+
+## Full regressions
+
+With a separately configured local Qdrant server and its nonempty `QDRANT_API_KEY` supplied
+through the trusted process environment, run:
+
+```bash
+RUN_QDRANT_INTEGRATION=1 RUN_SEMANTIC_INTEGRATION=1 RUN_SECURITY_INTEGRATION=1 \
+  RUN_KEYCLOAK_INTEGRATION=1 /workspace/.cache/phase1-final/venv/bin/python \
+  -m pytest services/rag-api/tests -q
+```
+
+Set `QDRANT_URL` to that server and retain the model-cache/offline variables above. The live
+Keycloak case provisions its own additional keyed Qdrant instance and restores the caller's
+environment afterward. This execution ran all 96 tests against disposable keyed backends.
+Six warnings were expected: one upstream Starlette/AnyIO deprecation and five warnings about
+API keys over loopback development HTTP. Production transport/TLS, browser flows, IdP HA,
+security scanning and remote CI execution remain outside this local acceptance run.

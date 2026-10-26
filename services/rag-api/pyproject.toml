@@ -34,7 +34,7 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 
-markers = ["keycloak: requires an official local Keycloak distribution and Java 21", "security: authentication and tenant isolation tests", "integration: requires a real Qdrant server and cached/downloadable real model"]
+markers = ["keycloak: requires Docker and the cached official Quay image pinned by digest", "security: authentication and tenant isolation tests", "integration: requires a real Qdrant server and cached/downloadable real model"]
 
 [tool.ruff]
 line-length = 100
