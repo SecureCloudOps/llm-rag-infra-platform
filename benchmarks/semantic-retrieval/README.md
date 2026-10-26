@@ -43,19 +43,39 @@ nonzero and records an explicit blocker if either requested provider fails.
 
 ## Recorded execution
 
-See [results.json](results.json) for the actual local execution. The SHA-256 baseline ran
-against Qdrant v1.12.6: Recall@1 0.066667, Recall@3 0.200000, MRR 0.221004.
-Only q03 and q05 ranked their labeled document first; the other 28 top-1 failures are
-listed in JSON. P50/P95 latency in milliseconds:
+Real Qdrant v1.12.6, Python 3.12.14, immutable MiniLM revision
+`c9745ed1d9f207416be6d2e6f8de32d1f16199bf`, two CPU threads.
+Both providers used byte-identical corpus/questions from `e5b9948`, fresh collections,
+and three sequential passes (90 latency samples each). Final measurements ran after
+the regression and container workloads completed.
 
-| Stage | P50 | P95 |
-| --- | ---: | ---: |
-| Mock embedding | 0.009719 | 0.017227 |
-| Vector search | 2.486928 | 4.116371 |
-| End-to-end retrieval | 2.496399 | 4.154656 |
+| Provider | Recall@1 | Recall@3 | MRR |
+| --- | ---: | ---: | ---: |
+| Historical mock baseline | 6.67% | 20.00% | 0.2210 |
+| Mock, current execution | 6.67% | 20.00% | 0.221004 |
+| MiniLM CPU, current execution | 83.33% | 96.67% | 0.902778 |
 
-**Semantic results are unavailable.** This environment's proxy returns HTTP 403 for
-`huggingface.co`, and the model was not pre-cached. There is no measured semantic-versus-mock
-improvement yet. The immutable model revision is configured but could not be verified
-against the upstream host in this environment. Rerun after approved network access or
-pre-population of the pinned model cache. Do not interpret the blocked result as zero recall.
+| Stage (milliseconds) | Mock P50 | Mock P95 | Semantic P50 | Semantic P95 |
+| --- | ---: | ---: | ---: | ---: |
+| Embedding | 0.006951 | 0.009356 | 12.729065 | 16.692691 |
+| Qdrant search | 1.525641 | 2.594860 | 4.220398 | 6.593522 |
+| End-to-end retrieval | 1.533183 | 2.601433 | 17.612695 | 21.888164 |
+
+The historical mock retrieval P50/P95 was 2.496399 / 4.154656 ms. Current timings
+vary with the host; compare relevance using identical labels, and do not infer production
+capacity from this small warm sequential workload. Semantic initialization was
+2721.491 ms; ingestion was 176.371 ms.
+
+## Semantic top-1 misses
+
+| Question | Query | Labeled document | Actual top result | Relevant rank |
+| --- | --- | --- | --- | ---: |
+| q01 | How can I limit what a workload is allowed to do in my cloud account? | iam-least-privilege | billing-tags | 2 |
+| q06 | What evidence helps diagnose repeated workload restarts? | k8s-crashloop | k8s-readiness | 3 |
+| q07 | How do I safely remove a worker machine from service for patching? | k8s-drain | iam-least-privilege | 2 |
+| q15 | How should we learn from an outage after restoring availability? | incident-response | backup-recovery | 2 |
+| q28 | How do I prevent traffic reaching an API before its model has loaded? | k8s-readiness | tls-renewal | 4 |
+
+Only q28 also missed top-3 (relevant rank 4). All questions had a relevant result
+in the complete ranking. No corpus, questions, or judgments were adjusted. The
+28 mock top-1 misses and all per-question rankings remain in [results.json](results.json).

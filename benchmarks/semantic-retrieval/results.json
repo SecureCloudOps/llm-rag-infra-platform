@@ -6,7 +6,7 @@
   "providers": {
     "mock": {
       "status": "ok",
-      "collection": "benchmark-mock-83cc0e43e08046898db1cc747f7536ae",
+      "collection": "benchmark-mock-19f00dcb5ee24e2a817f7e9e9b44ea92",
       "identity": {
         "provider": "mock",
         "model": "sha256",
@@ -15,21 +15,21 @@
       "dimensions": 8,
       "questions": 30,
       "repeats": 3,
-      "ingestion_ms": 6.9406659999913245,
+      "ingestion_ms": 2.8762990000359423,
       "recall_at_1": 0.06666666666666667,
       "recall_at_3": 0.2,
       "mrr": 0.2210044585044585,
       "embedding_latency": {
-        "p50_ms": 0.009718999990582233,
-        "p95_ms": 0.017227299991873196
+        "p50_ms": 0.006950500022639972,
+        "p95_ms": 0.009356000006732756
       },
       "vector_search_latency": {
-        "p50_ms": 2.486927999996169,
-        "p95_ms": 4.116371150075793
+        "p50_ms": 1.5256410000290543,
+        "p95_ms": 2.594859850003672
       },
       "end_to_end_latency": {
-        "p50_ms": 2.4963994999893657,
-        "p95_ms": 4.1546562000178255
+        "p50_ms": 1.5331825000259869,
+        "p95_ms": 2.601432850019591
       },
       "relevance_failures_at_1": [
         "q01",
@@ -753,11 +753,736 @@
           "reciprocal_rank": 0.2
         }
       ],
-      "initialization_ms": 0.0018499999896448571
+      "initialization_ms": 0.001422000025286252
     },
     "sentence_transformers": {
-      "status": "blocked",
-      "error": "Cannot initialize embedding model sentence-transformers/all-MiniLM-L6-v2@c9745ed1d9f207416be6d2e6f8de32d1f16199bf: (MaxRetryError(\"HTTPSConnectionPool(host='huggingface.co', port=443): Max retries exceeded with url: /sentence-transformers/all-MiniLM-L6-v2/resolve/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/adapter_config.json (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))\"), '(Request ID: 1fcbaec7-e7e7-4860-8168-fa10df614e4a)'). Install CPU dependencies, verify model/revision and Hugging Face network access, and ensure EMBEDDING_CACHE_DIR is writable or pre-populated. No mock fallback."
+      "status": "ok",
+      "collection": "benchmark-sentence_transformers-23a35790589d4345a1c0141da9833552",
+      "identity": {
+        "provider": "sentence_transformers",
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "revision": "c9745ed1d9f207416be6d2e6f8de32d1f16199bf",
+        "normalized": true
+      },
+      "dimensions": 384,
+      "questions": 30,
+      "repeats": 3,
+      "ingestion_ms": 176.3708999999949,
+      "recall_at_1": 0.8333333333333334,
+      "recall_at_3": 0.9666666666666667,
+      "mrr": 0.9027777777777778,
+      "embedding_latency": {
+        "p50_ms": 12.729065000002038,
+        "p95_ms": 16.69269079997946
+      },
+      "vector_search_latency": {
+        "p50_ms": 4.2203975000063565,
+        "p95_ms": 6.59352170000602
+      },
+      "end_to_end_latency": {
+        "p50_ms": 17.61269500002527,
+        "p95_ms": 21.88816444996746
+      },
+      "relevance_failures_at_1": [
+        "q01",
+        "q06",
+        "q07",
+        "q15",
+        "q28"
+      ],
+      "results": [
+        {
+          "question_id": "q01",
+          "ranked_document_ids": [
+            "billing-tags",
+            "iam-least-privilege",
+            "network-private",
+            "k8s-drain",
+            "image-build",
+            "security-secrets",
+            "storage-lifecycle",
+            "tls-renewal",
+            "monitoring-alerts",
+            "k8s-readiness",
+            "k8s-crashloop",
+            "backup-recovery",
+            "qdrant-reindex",
+            "incident-response",
+            "dns-cache"
+          ],
+          "recall_at_1": 0.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "question_id": "q02",
+          "ranked_document_ids": [
+            "iam-least-privilege",
+            "security-secrets",
+            "tls-renewal",
+            "network-private",
+            "k8s-drain",
+            "storage-lifecycle",
+            "dns-cache",
+            "incident-response",
+            "k8s-readiness",
+            "billing-tags",
+            "backup-recovery",
+            "image-build",
+            "monitoring-alerts",
+            "qdrant-reindex",
+            "k8s-crashloop"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q03",
+          "ranked_document_ids": [
+            "iam-least-privilege",
+            "security-secrets",
+            "network-private",
+            "billing-tags",
+            "k8s-drain",
+            "monitoring-alerts",
+            "storage-lifecycle",
+            "incident-response",
+            "image-build",
+            "qdrant-reindex",
+            "tls-renewal",
+            "dns-cache",
+            "k8s-crashloop",
+            "backup-recovery",
+            "k8s-readiness"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q04",
+          "ranked_document_ids": [
+            "k8s-crashloop",
+            "k8s-readiness",
+            "k8s-drain",
+            "image-build",
+            "storage-lifecycle",
+            "incident-response",
+            "dns-cache",
+            "qdrant-reindex",
+            "security-secrets",
+            "tls-renewal",
+            "backup-recovery",
+            "monitoring-alerts",
+            "iam-least-privilege",
+            "billing-tags",
+            "network-private"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q05",
+          "ranked_document_ids": [
+            "k8s-crashloop",
+            "k8s-readiness",
+            "k8s-drain",
+            "image-build",
+            "incident-response",
+            "backup-recovery",
+            "monitoring-alerts",
+            "storage-lifecycle",
+            "qdrant-reindex",
+            "billing-tags",
+            "tls-renewal",
+            "security-secrets",
+            "dns-cache",
+            "network-private",
+            "iam-least-privilege"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q06",
+          "ranked_document_ids": [
+            "k8s-readiness",
+            "monitoring-alerts",
+            "k8s-crashloop",
+            "k8s-drain",
+            "incident-response",
+            "dns-cache",
+            "backup-recovery",
+            "billing-tags",
+            "tls-renewal",
+            "storage-lifecycle",
+            "qdrant-reindex",
+            "security-secrets",
+            "image-build",
+            "iam-least-privilege",
+            "network-private"
+          ],
+          "recall_at_1": 0.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "question_id": "q07",
+          "ranked_document_ids": [
+            "iam-least-privilege",
+            "k8s-drain",
+            "incident-response",
+            "network-private",
+            "k8s-readiness",
+            "tls-renewal",
+            "image-build",
+            "security-secrets",
+            "storage-lifecycle",
+            "k8s-crashloop",
+            "dns-cache",
+            "qdrant-reindex",
+            "monitoring-alerts",
+            "backup-recovery",
+            "billing-tags"
+          ],
+          "recall_at_1": 0.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "question_id": "q08",
+          "ranked_document_ids": [
+            "k8s-drain",
+            "k8s-readiness",
+            "k8s-crashloop",
+            "image-build",
+            "incident-response",
+            "tls-renewal",
+            "dns-cache",
+            "monitoring-alerts",
+            "billing-tags",
+            "network-private",
+            "iam-least-privilege",
+            "security-secrets",
+            "storage-lifecycle",
+            "qdrant-reindex",
+            "backup-recovery"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q09",
+          "ranked_document_ids": [
+            "k8s-drain",
+            "k8s-readiness",
+            "k8s-crashloop",
+            "security-secrets",
+            "billing-tags",
+            "storage-lifecycle",
+            "network-private",
+            "tls-renewal",
+            "iam-least-privilege",
+            "image-build",
+            "backup-recovery",
+            "incident-response",
+            "monitoring-alerts",
+            "qdrant-reindex",
+            "dns-cache"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q10",
+          "ranked_document_ids": [
+            "monitoring-alerts",
+            "k8s-readiness",
+            "tls-renewal",
+            "k8s-drain",
+            "k8s-crashloop",
+            "billing-tags",
+            "incident-response",
+            "security-secrets",
+            "image-build",
+            "backup-recovery",
+            "dns-cache",
+            "network-private",
+            "qdrant-reindex",
+            "iam-least-privilege",
+            "storage-lifecycle"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q11",
+          "ranked_document_ids": [
+            "monitoring-alerts",
+            "incident-response",
+            "tls-renewal",
+            "k8s-readiness",
+            "dns-cache",
+            "k8s-drain",
+            "k8s-crashloop",
+            "iam-least-privilege",
+            "network-private",
+            "qdrant-reindex",
+            "backup-recovery",
+            "billing-tags",
+            "storage-lifecycle",
+            "security-secrets",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q12",
+          "ranked_document_ids": [
+            "monitoring-alerts",
+            "incident-response",
+            "tls-renewal",
+            "iam-least-privilege",
+            "k8s-readiness",
+            "network-private",
+            "k8s-drain",
+            "security-secrets",
+            "backup-recovery",
+            "storage-lifecycle",
+            "k8s-crashloop",
+            "dns-cache",
+            "image-build",
+            "billing-tags",
+            "qdrant-reindex"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q13",
+          "ranked_document_ids": [
+            "incident-response",
+            "k8s-crashloop",
+            "monitoring-alerts",
+            "k8s-drain",
+            "k8s-readiness",
+            "dns-cache",
+            "security-secrets",
+            "tls-renewal",
+            "billing-tags",
+            "network-private",
+            "image-build",
+            "storage-lifecycle",
+            "backup-recovery",
+            "iam-least-privilege",
+            "qdrant-reindex"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q14",
+          "ranked_document_ids": [
+            "incident-response",
+            "monitoring-alerts",
+            "tls-renewal",
+            "iam-least-privilege",
+            "dns-cache",
+            "k8s-readiness",
+            "backup-recovery",
+            "k8s-drain",
+            "network-private",
+            "security-secrets",
+            "billing-tags",
+            "k8s-crashloop",
+            "storage-lifecycle",
+            "qdrant-reindex",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q15",
+          "ranked_document_ids": [
+            "backup-recovery",
+            "incident-response",
+            "k8s-drain",
+            "dns-cache",
+            "k8s-crashloop",
+            "storage-lifecycle",
+            "tls-renewal",
+            "k8s-readiness",
+            "monitoring-alerts",
+            "billing-tags",
+            "network-private",
+            "qdrant-reindex",
+            "iam-least-privilege",
+            "security-secrets",
+            "image-build"
+          ],
+          "recall_at_1": 0.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "question_id": "q16",
+          "ranked_document_ids": [
+            "security-secrets",
+            "incident-response",
+            "iam-least-privilege",
+            "storage-lifecycle",
+            "tls-renewal",
+            "k8s-crashloop",
+            "billing-tags",
+            "dns-cache",
+            "qdrant-reindex",
+            "network-private",
+            "k8s-drain",
+            "backup-recovery",
+            "k8s-readiness",
+            "monitoring-alerts",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q17",
+          "ranked_document_ids": [
+            "security-secrets",
+            "iam-least-privilege",
+            "network-private",
+            "image-build",
+            "dns-cache",
+            "billing-tags",
+            "tls-renewal",
+            "k8s-readiness",
+            "backup-recovery",
+            "storage-lifecycle",
+            "k8s-drain",
+            "k8s-crashloop",
+            "monitoring-alerts",
+            "qdrant-reindex",
+            "incident-response"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q18",
+          "ranked_document_ids": [
+            "security-secrets",
+            "tls-renewal",
+            "iam-least-privilege",
+            "incident-response",
+            "backup-recovery",
+            "monitoring-alerts",
+            "network-private",
+            "storage-lifecycle",
+            "dns-cache",
+            "billing-tags",
+            "k8s-drain",
+            "qdrant-reindex",
+            "k8s-crashloop",
+            "k8s-readiness",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q19",
+          "ranked_document_ids": [
+            "backup-recovery",
+            "storage-lifecycle",
+            "qdrant-reindex",
+            "incident-response",
+            "security-secrets",
+            "dns-cache",
+            "tls-renewal",
+            "network-private",
+            "k8s-drain",
+            "billing-tags",
+            "image-build",
+            "k8s-readiness",
+            "iam-least-privilege",
+            "k8s-crashloop",
+            "monitoring-alerts"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q20",
+          "ranked_document_ids": [
+            "backup-recovery",
+            "storage-lifecycle",
+            "incident-response",
+            "billing-tags",
+            "dns-cache",
+            "security-secrets",
+            "k8s-readiness",
+            "k8s-crashloop",
+            "monitoring-alerts",
+            "qdrant-reindex",
+            "k8s-drain",
+            "image-build",
+            "tls-renewal",
+            "network-private",
+            "iam-least-privilege"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q21",
+          "ranked_document_ids": [
+            "backup-recovery",
+            "iam-least-privilege",
+            "incident-response",
+            "k8s-readiness",
+            "storage-lifecycle",
+            "k8s-drain",
+            "dns-cache",
+            "tls-renewal",
+            "billing-tags",
+            "monitoring-alerts",
+            "k8s-crashloop",
+            "network-private",
+            "qdrant-reindex",
+            "security-secrets",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q22",
+          "ranked_document_ids": [
+            "network-private",
+            "tls-renewal",
+            "security-secrets",
+            "dns-cache",
+            "incident-response",
+            "iam-least-privilege",
+            "storage-lifecycle",
+            "billing-tags",
+            "monitoring-alerts",
+            "backup-recovery",
+            "image-build",
+            "qdrant-reindex",
+            "k8s-readiness",
+            "k8s-drain",
+            "k8s-crashloop"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q23",
+          "ranked_document_ids": [
+            "network-private",
+            "storage-lifecycle",
+            "security-secrets",
+            "iam-least-privilege",
+            "dns-cache",
+            "tls-renewal",
+            "k8s-readiness",
+            "billing-tags",
+            "image-build",
+            "qdrant-reindex",
+            "backup-recovery",
+            "monitoring-alerts",
+            "k8s-crashloop",
+            "k8s-drain",
+            "incident-response"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q24",
+          "ranked_document_ids": [
+            "network-private",
+            "iam-least-privilege",
+            "tls-renewal",
+            "security-secrets",
+            "incident-response",
+            "k8s-readiness",
+            "dns-cache",
+            "billing-tags",
+            "monitoring-alerts",
+            "backup-recovery",
+            "image-build",
+            "k8s-drain",
+            "k8s-crashloop",
+            "qdrant-reindex",
+            "storage-lifecycle"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q25",
+          "ranked_document_ids": [
+            "qdrant-reindex",
+            "storage-lifecycle",
+            "security-secrets",
+            "k8s-drain",
+            "backup-recovery",
+            "dns-cache",
+            "image-build",
+            "billing-tags",
+            "k8s-crashloop",
+            "incident-response",
+            "k8s-readiness",
+            "network-private",
+            "tls-renewal",
+            "iam-least-privilege",
+            "monitoring-alerts"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q26",
+          "ranked_document_ids": [
+            "qdrant-reindex",
+            "storage-lifecycle",
+            "dns-cache",
+            "security-secrets",
+            "k8s-readiness",
+            "image-build",
+            "iam-least-privilege",
+            "incident-response",
+            "k8s-drain",
+            "tls-renewal",
+            "billing-tags",
+            "k8s-crashloop",
+            "network-private",
+            "monitoring-alerts",
+            "backup-recovery"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q27",
+          "ranked_document_ids": [
+            "qdrant-reindex",
+            "image-build",
+            "k8s-drain",
+            "k8s-crashloop",
+            "dns-cache",
+            "incident-response",
+            "storage-lifecycle",
+            "backup-recovery",
+            "k8s-readiness",
+            "monitoring-alerts",
+            "iam-least-privilege",
+            "tls-renewal",
+            "billing-tags",
+            "security-secrets",
+            "network-private"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q28",
+          "ranked_document_ids": [
+            "tls-renewal",
+            "monitoring-alerts",
+            "network-private",
+            "k8s-readiness",
+            "iam-least-privilege",
+            "qdrant-reindex",
+            "k8s-drain",
+            "dns-cache",
+            "image-build",
+            "security-secrets",
+            "billing-tags",
+            "storage-lifecycle",
+            "incident-response",
+            "k8s-crashloop",
+            "backup-recovery"
+          ],
+          "recall_at_1": 0.0,
+          "recall_at_3": 0.0,
+          "reciprocal_rank": 0.25
+        },
+        {
+          "question_id": "q29",
+          "ranked_document_ids": [
+            "k8s-readiness",
+            "incident-response",
+            "k8s-crashloop",
+            "monitoring-alerts",
+            "k8s-drain",
+            "tls-renewal",
+            "dns-cache",
+            "backup-recovery",
+            "iam-least-privilege",
+            "storage-lifecycle",
+            "billing-tags",
+            "network-private",
+            "security-secrets",
+            "qdrant-reindex",
+            "image-build"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "question_id": "q30",
+          "ranked_document_ids": [
+            "k8s-readiness",
+            "image-build",
+            "k8s-crashloop",
+            "k8s-drain",
+            "dns-cache",
+            "network-private",
+            "iam-least-privilege",
+            "storage-lifecycle",
+            "security-secrets",
+            "billing-tags",
+            "qdrant-reindex",
+            "incident-response",
+            "monitoring-alerts",
+            "tls-renewal",
+            "backup-recovery"
+          ],
+          "recall_at_1": 1.0,
+          "recall_at_3": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ],
+      "initialization_ms": 2721.4911940000093
     }
   }
 }

@@ -26,8 +26,15 @@ def main():
         "--mock", action="store_true", help="Explicit mock-only plumbing validation"
     )
     parser.add_argument("--ca-bundle", type=Path)
+    parser.add_argument(
+        "--model-cache", type=Path,
+        help="Pre-populated Hugging Face hub cache to mount read-only at /models",
+    )
+    parser.add_argument("--offline", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.offline and not args.model_cache:
+        parser.error("--offline requires --model-cache with the pinned snapshot")
     name = "semantic-smoke-" + uuid4().hex
     collection = name + ("-mock" if args.mock else "-real")
     report = {
@@ -58,9 +65,20 @@ def main():
         "HF_HUB_ETAG_TIMEOUT=3",
         "-e",
         "HF_HUB_DOWNLOAD_TIMEOUT=3",
-        "-v",
-        "semantic-task-model-cache:/models",
     ]
+    if args.model_cache:
+        if not args.model_cache.is_dir():
+            parser.error("--model-cache must be an existing hub cache directory")
+        command += [
+            "--mount", f"type=bind,src={args.model_cache.resolve()},dst=/models,readonly",
+            "-e", "HF_HOME=/tmp/huggingface",
+        ]
+    else:
+        command += ["-v", "semantic-task-model-cache:/models"]
+    if args.offline:
+        command += ["-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1"]
+    report["offline"] = args.offline
+    report["cache_provisioning"] = "read-only bind mount" if args.model_cache else "named volume"
     if args.mock:
         command += ["-e", "EMBEDDING_PROVIDER=mock", "-e", "EMBEDDING_DIMENSIONS=8"]
     if args.ca_bundle:
@@ -107,6 +125,31 @@ def main():
                 "import torch; assert torch.version.cuda is None; print(torch.__version__)",
             )
             report["torch_cpu_version"] = cpu
+            if args.offline and not args.mock:
+                # No network interface and an audit hook prove real cached inference
+                # works without even attempting an external connection.
+                output = docker(
+                    "run", "--rm", "--network", "none",
+                    "--mount", f"type=bind,src={args.model_cache.resolve()},dst=/models,readonly",
+                    "-e", "HF_HOME=/tmp/huggingface",
+                    "-e", "HF_HUB_OFFLINE=1", "-e", "TRANSFORMERS_OFFLINE=1",
+                    "--entrypoint", "python", args.image, "-c",
+                    "import sys, json, math\n"
+                    "attempts = []\n"
+                    "def block(event, args):\n"
+                    "    if event in ('socket.connect', 'socket.getaddrinfo', 'socket.sendto'):\n"
+                    "        attempts.append(event)\n"
+                    "        raise AssertionError('Unexpected network attempt: ' + event)\n"
+                    "sys.addaudithook(block)\n"
+                    "from app.embeddings import SentenceTransformerEmbeddingProvider\n"
+                    "p = SentenceTransformerEmbeddingProvider(cache_folder='/models')\n"
+                    "v = p.embed('Kubernetes workload scheduling')\n"
+                    "assert len(v) == 384 and all(math.isfinite(x) for x in v)\n"
+                    "assert str(p._model.device) == 'cpu'\n"
+                    "assert not attempts, attempts\n"
+                    "print(json.dumps({'dimensions': len(v), 'device': 'cpu', 'network_attempts': len(attempts)}))\n",
+                )
+                report["disconnected_inference"] = json.loads(output.splitlines()[-1])
             text = "Place databases in private subnets without public IP addresses to prevent internet access."
             response = client.post(
                 "/documents/upload", files={"file": ("network.txt", text)}
@@ -140,6 +183,12 @@ def main():
             response.raise_for_status()
             report["documents_after_restart"] = response.json()
             assert response.json() == report["documents_before_restart"]
+            response = client.post(
+                "/search", json={"query": "How do I keep a database private?"}
+            )
+            response.raise_for_status()
+            assert response.json()["results"][0]["filename"] == "network.txt"
+            report["search_after_restart"] = response.json()
             report["status"] = "passed"
     except Exception as exc:
         report.update(status="blocked" if not args.mock else "failed", error=str(exc))

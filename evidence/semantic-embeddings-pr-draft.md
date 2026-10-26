@@ -25,19 +25,21 @@ Operational documentation covers migration, cache prewarming, and concurrency li
 
 ## Validation
 
-- 48 unit tests passed; actual Qdrant v1.12.6 compatibility integration passed.
-- Docker build passed. Explicit mock-mode container passed readiness, ingestion, documents,
-  search, ask, and restart persistence. CPU Torch 2.5.1+cpu confirmed.
-- Ruff, compileall, dependency consistency, and base/Kind manifest rendering passed.
-- Actual mock baseline: Recall@1 **0.066667**, Recall@3 **0.200000**, MRR **0.221004**.
-  End-to-end retrieval P50/P95 **2.496399 / 4.154656 ms**.
-- **Blocked:** real-model integration and default semantic container startup fail because
-  the managed proxy denies Hugging Face with HTTP 403. The model is not cached. No semantic
-  relevance results or real cached-restart success are claimed; upstream SHA verification
-  is pending. This draft is not ready for merge until real validation can be completed.
+- 50 tests passed, including real CPU model/Qdrant upload, search, ask, persisted actual
+  encoder-vector comparison, restart, offline new process, and compatibility rejection.
+- Docker image built; explicitly cached offline semantic container passed endpoints and
+  restart persistence. Separate network-disabled container generated 384 finite CPU values
+  with zero network attempts. Host and image dependency checks passed.
+- Ruff, compile/static syntax, Compose configuration, and base/Kind Kubernetes rendering passed.
+- Identical 30-question benchmark: mock Recall@1/Recall@3/MRR 6.67%/20.00%/0.221004;
+  semantic 83.33%/96.67%/0.902778. Five semantic top-1 misses, including one top-3 miss,
+  are documented with exact rankings. No questions or judgments were changed.
+- Full dependency lock now uses the previously validated sentence-transformers 3.4.1,
+  transformers 4.48.3, huggingface-hub 0.28.1, and torch 2.5.1+cpu stack.
 
-See [full execution evidence](semantic-embeddings.md), [benchmark data](../benchmarks/semantic-retrieval/results.json),
-and [operations/migration](../docs/semantic-embeddings.md) for exact commands and tradeoffs.
+See [execution evidence](semantic-embeddings.md), [benchmark results](../benchmarks/semantic-retrieval/results.json),
+and [offline container evidence](semantic-container-real.json). Phase 1 acceptance passed;
+no merge, remote push, image publication, or live deployment was performed.
 
 ## Operational considerations
 

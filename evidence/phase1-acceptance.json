@@ -1,0 +1,59 @@
+{
+  "acceptance": "PASS",
+  "date": "2026-10-25 America/New_York",
+  "implementation_commit": "e5b99489812faf20c4f994677b6194f934614c88",
+  "python": "3.12.14",
+  "qdrant": "1.12.6",
+  "tests": {
+    "passed": 50,
+    "failed": 0,
+    "skipped": 0,
+    "warnings": 1,
+    "seconds": 9.57
+  },
+  "commands": {
+    "install_torch": "$V/bin/pip --isolated install --retries 0 --index-url https://download.pytorch.org/whl/cpu -c /workspace/.cache/phase1-embeddings/requirements.freeze.txt 'torch==2.5.1+cpu'",
+    "install_application": "$V/bin/pip --isolated install --retries 0 --index-url https://pypi.org/simple -c /workspace/.cache/phase1-embeddings/requirements.freeze.txt -e 'services/rag-api[dev]'",
+    "full_tests": "RUN_QDRANT_INTEGRATION=1 RUN_SEMANTIC_INTEGRATION=1 QDRANT_URL=http://localhost:6333 $V/bin/python -m pytest services/rag-api/tests -q",
+    "build": "docker build --secret id=proxy_ca,src=/etc/ssl/certs/ca-certificates.crt --tag rag-api:semantic services/rag-api",
+    "container": "$V/bin/python scripts/semantic-container-smoke.py --image rag-api:semantic --port 8003 --offline --model-cache /workspace/.cache/phase1-embeddings/hub --output evidence/semantic-container-real.json",
+    "benchmark": "$V/bin/python benchmarks/semantic-retrieval/run.py --qdrant-url http://localhost:6333 --provider both --repeats 3 --output benchmarks/semantic-retrieval/results.json",
+    "lint": "$V/bin/python -m ruff check services/rag-api benchmarks/semantic-retrieval scripts/semantic-container-smoke.py",
+    "compile": "$V/bin/python -m compileall -q services/rag-api/app benchmarks/semantic-retrieval scripts/semantic-container-smoke.py",
+    "dependencies": "$V/bin/python -m pip check",
+    "container_dependencies": "docker run --rm --network none --entrypoint python rag-api:semantic -m pip check",
+    "kubernetes": "/workspace/.local/bin/kubectl kustomize k8s/ > /workspace/.cache/phase1-final/k8s.yaml",
+    "kind": "/workspace/.local/bin/kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/kind > /workspace/.cache/phase1-final/kind.yaml",
+    "compose": "docker compose config --quiet",
+    "diff": "git diff --check"
+  },
+  "environment": {
+    "V": "/workspace/.cache/phase1-final/venv",
+    "HF_HOME": "/workspace/.cache/phase1-embeddings",
+    "EMBEDDING_CACHE_DIR": "/workspace/.cache/phase1-embeddings/hub",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "OMP_NUM_THREADS": "2",
+    "NO_PROXY": "localhost,127.0.0.1",
+    "no_proxy": "localhost,127.0.0.1"
+  },
+  "results": {
+    "docker_build": "passed",
+    "offline_container_and_restart": "passed",
+    "lint": "passed",
+    "compile": "passed",
+    "pip_check_host_and_container": "passed",
+    "kubernetes_and_kind_render": "passed",
+    "compose_config": "passed",
+    "benchmark": "both providers succeeded",
+    "corpus_and_questions": "byte-identical to e5b9948",
+    "kubernetes_base_resources": 29,
+    "kind_resources": 27
+  },
+  "limitations": [
+    "Small synthetic benchmark; five semantic top-1 misses, one top-3 miss.",
+    "Single-process warm sequential latency, not production load testing.",
+    "Kubernetes rendered only; no cluster deployment, remote CI, or security scans performed.",
+    "Image and branch were not pushed, merged, or published."
+  ]
+}

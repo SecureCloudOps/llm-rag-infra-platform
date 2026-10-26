@@ -5,6 +5,7 @@ import subprocess
 import sys
 from uuid import uuid4
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -36,6 +37,7 @@ def test_real_ingestion_retrieval_ask_restart_cache_and_isolation(monkeypatch):
     with TestClient(main.app) as client:
         provider = main.app.state.embedding_provider
         assert provider.identity["provider"] == "sentence_transformers"
+        assert str(provider._model.device) == "cpu"
         assert len(provider.embed("startup model test")) == 384
         assert provider.embed("same input") == provider.embed("same input")
         for filename, text in texts.items():
@@ -44,6 +46,17 @@ def test_real_ingestion_retrieval_ask_restart_cache_and_isolation(monkeypatch):
                 == 200
             )
         assert client.get("/ready").status_code == 200
+        store = main.app.state.vector_store
+        params = store.client.get_collection(name).config.params.vectors
+        assert params.size == 384
+        assert params.distance.value == "Cosine"
+        points, _ = store.client.scroll(name, with_vectors=True, with_payload=True)
+        assert len(points) == len(texts)
+        for point in points:
+            # Check the API persisted the genuine encoder's output, rather than
+            # relying only on its configured provider name or vector dimension.
+            expected = provider.embed(point.payload["chunk_text"])
+            np.testing.assert_allclose(point.vector, expected, atol=1e-6, rtol=1e-5)
         stats = client.get("/documents").json()
         result = client.post(
             "/search", json={"query": "How do I keep my data store off the public internet?"}
@@ -55,6 +68,7 @@ def test_real_ingestion_retrieval_ask_restart_cache_and_isolation(monkeypatch):
         assert result["sources"][0]["filename"] == "database.txt"
         assert result["retrieved_chunks"] == 3
         assert result["answer"]
+        assert main.app.state.embedding_provider is provider
     # Offline restart proves cached artifacts suffice, rather than successful re-download.
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
     monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")

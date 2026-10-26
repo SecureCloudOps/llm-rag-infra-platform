@@ -154,11 +154,11 @@ UUID collections for inspection. CI includes a real Qdrant service, persistent m
 and a benchmark artifact; it does not substitute a fake encoder for this job.
 
 See [benchmark methodology and recorded results](../benchmarks/semantic-retrieval/README.md)
-and [execution evidence](../evidence/semantic-embeddings.md). This environment blocks Hugging
-Face downloads, so successful semantic integration, semantic quality, and cached real-model
-restart remain unverified. The configured model SHA could not be independently verified
-against upstream here. The existing Terraform provider lockfile issue is a separate known
-limitation; Terraform and its lockfiles are unchanged by this work.
+and [execution evidence](../evidence/semantic-embeddings.md). Phase 1 acceptance passed:
+50 tests including genuine CPU/Qdrant integration, 384-dimensional real vectors, offline
+API restart, Docker build/endpoints/restart, and the unchanged 30-question benchmark.
+Semantic Recall@1 is 83.33%, Recall@3 96.67%, and MRR 0.902778; five top-1 misses remain.
+Terraform and its existing provider-lockfile limitation remain outside this work.
 
 
 Container smoke validation uses the existing Compose Qdrant network and leaves data in
@@ -175,3 +175,43 @@ services/rag-api/.venv/bin/python scripts/semantic-container-smoke.py \
 Pass `--ca-bundle /path/to/combined-ca.pem` when your managed proxy requires its CA.
 The script configures both cases of `no_proxy` for internal Qdrant traffic; model downloads
 retain the configured proxy and TLS verification.
+
+
+## Explicit provisioning for offline container validation
+
+The validated host cache is a Hugging Face **hub cache**, containing `blobs/` and
+`snapshots/` below `models--sentence-transformers--all-MiniLM-L6-v2`. Preserve relative
+symlinks and verify the immutable revision and artifact hashes before provisioning.
+The application image does not include these model weights. A host cache is not automatically
+available in Docker, and the Compose `embedding-cache` volume is a separate store.
+
+To reproduce the validated offline path with an existing verified cache:
+
+```bash
+python scripts/semantic-container-smoke.py --image rag-api:semantic \
+  --offline --model-cache /workspace/.cache/phase1-embeddings/hub \
+  --output /tmp/semantic-container-real.json
+```
+
+This explicitly mounts the entire hub cache read-only at `/models`, uses a separate writable
+`HF_HOME`, and sets both offline flags before process startup. It tests a separate CPU encoder
+container with `--network none` plus a network-attempt audit guard, then exercises the API on
+the existing Compose Qdrant network and verifies persisted counts and retrieval after restart.
+It removes only its disposable containers; collections and Qdrant data are preserved.
+No external model download is attempted in this mode. Host cache permissions must allow
+container UID/GID 1000 to traverse directories and read files.
+
+For the normal Compose named-volume path, populate `embedding-cache` separately before
+switching to offline startup. For example, with model-host access and the required proxy CA
+configured for the runtime, prewarm using the same image and exact provider configuration:
+
+```bash
+docker compose run --rm --no-deps --entrypoint python rag-api -c \
+  "from app.config import get_settings; from app.embeddings import create_embedding_provider; p=create_embedding_provider(get_settings()); assert len(p.embed('Kubernetes workload scheduling')) == 384"
+```
+
+Then set `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1` in the API container environment
+for disconnected startup, retaining that same volume. Those flags must be passed to the
+container; exporting them only in the host shell does not automatically pass them through
+Compose. The named-volume online prewarm command is an operator alternative; this execution
+validated the explicit read-only bind path described above.
